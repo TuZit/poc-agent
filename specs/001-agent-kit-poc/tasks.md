@@ -119,6 +119,10 @@ siblings. Each task lists the files it touches.
 - [x] **T064** [P] Write the development guide — `docs/development.md`
 - [x] **T065** [P] Write the Kiro integration guide — `docs/kiro-integration.md`
 - [x] **T066** Record the governing principles — `.specify/memory/constitution.md`
+- [x] **T067** [P] Write the Vietnamese UAT tutorial (install, usage, 35 acceptance cases) — `docs/uat-tutorial.md`
+- [x] **T068** [P] Write the packaging & deployment guide (wheel, assets, Docker, CI/CD, secrets, rollback) — `docs/packaging-deployment.md`
+- [x] **T069** Make the version single-sourced from `agent_kit.__version__` — `pyproject.toml`, `src/agent_kit/__init__.py`
+- [x] **T070** Support `AGENT_KIT_MODEL` as the model-name fallback for deployments — `src/agent_kit/config/loader.py`, `tests/unit/test_config_loader.py`
 
 **Checkpoint F:** `uv tool install .` then the demo checklist in
 [`../../docs/development.md`](../../docs/development.md) passes.
@@ -142,7 +146,7 @@ Phase 1 ─► Phase 2 ─► Phase 3 ─► Phase 4 ─► Phase 5
 
 | Command | Result |
 | --- | --- |
-| `uv run pytest` | 163 passed, offline, no API key |
+| `uv run pytest` | 166 passed, offline, no API key |
 | `agent-kit doctor` (mock provider) | `Agent environment is ready.` |
 | `agent-kit run` + `agent-kit evaluate output/sample-001.md` | `Result: PASS` |
 | `agent-kit kiro status` | `Kiro integration is complete.` |

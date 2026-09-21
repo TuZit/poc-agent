@@ -54,7 +54,7 @@ Install → Init → Configure → Load skill → Run agent → Use tools → Ge
 | `requirement-analysis` workflow | ✅ |
 | Sample input + expected output | ✅ |
 | Deterministic evaluator (no LLM judge) | ✅ |
-| Unit + integration tests, offline (163 tests) | ✅ |
+| Unit + integration tests, offline (166 tests) | ✅ |
 | Docker image | ✅ |
 | Kiro integration (steering, hooks, prompts, custom agent, MCP server, specs) | ✅ |
 
@@ -463,6 +463,7 @@ dsh-build/
 | Document | Contents |
 | --- | --- |
 | [`docs/uat-tutorial.md`](docs/uat-tutorial.md) | **UAT guide (tiếng Việt)** — cài đặt, sử dụng, 35 test case nghiệm thu, xử lý sự cố |
+| [`docs/packaging-deployment.md`](docs/packaging-deployment.md) | **Packaging & deployment (tiếng Việt)** — build wheel, nhúng asset, Docker, CI/CD, secret, rollback |
 | [`docs/architecture.md`](docs/architecture.md) | layers, contracts, data flow, security model, extension seams |
 | [`docs/development.md`](docs/development.md) | local setup, tests, debugging, adding components, demo checklist |
 | [`docs/kiro-integration.md`](docs/kiro-integration.md) | Kiro file formats, MCP tools, hooks, steering, troubleshooting |

@@ -407,7 +407,7 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 
 | ID | Kịch bản | Các bước | Kết quả mong đợi | KQ |
 |---|---|---|---|---|
-| UAT-31 | Toàn bộ test suite | `cd dsh-build && uv run pytest` | `163 passed`, **không cần** `OPENAI_API_KEY`, không cần mạng | ☐ |
+| UAT-31 | Toàn bộ test suite | `cd dsh-build && uv run pytest` | `166 passed`, **không cần** `OPENAI_API_KEY`, không cần mạng | ☐ |
 | UAT-32 | Filesystem bị giới hạn | `uv run pytest tests/unit/test_tools.py -k traversal` | Test PASS: ghi ra ngoài project root bị từ chối | ☐ |
 | UAT-33 | Shell bị giới hạn | `uv run pytest tests/unit/test_tools.py -k whitelist` | Test PASS: lệnh ngoài whitelist (`bash`, `echo`...) bị từ chối | ☐ |
 | UAT-34 | Không lộ secret | `cat .agent/config.yaml` | Không có API key trong file; key chỉ nằm ở biến môi trường | ☐ |
@@ -423,7 +423,7 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 2. `agent-kit doctor` báo `Agent environment is ready.` ở cấu hình `mock`.
 3. `agent-kit evaluate output/sample-001.md` trả `Result: PASS`.
 4. `agent-kit kiro status` trả `Kiro integration is complete.`
-5. `uv run pytest` trả `163 passed` **khi đã unset `OPENAI_API_KEY`** (chứng minh test offline).
+5. `uv run pytest` trả `166 passed` **khi đã unset `OPENAI_API_KEY`** (chứng minh test offline).
 6. Không có lỗi crash/traceback Python nào khi chạy các kịch bản trên (ngoại trừ các negative test được mô tả là phải thoát mã 1 với thông báo thân thiện).
 
 **FAIL** nếu: có traceback Python thô, CLI treo, ghi được ra ngoài project root, thực thi được lệnh ngoài whitelist, hoặc file cấu hình chứa secret.
@@ -549,6 +549,7 @@ demo-project/
 | Tài liệu | Nội dung |
 |---|---|
 | [`../README.md`](../README.md) | Tổng quan sản phẩm, kiến trúc, hướng dẫn mở rộng |
+| [`packaging-deployment.md`](packaging-deployment.md) | Đóng gói (wheel/Docker) và triển khai (CI/CD, secret, rollback) |
 | [`architecture.md`](architecture.md) | Kiến trúc phân lớp, mô hình bảo mật |
 | [`development.md`](development.md) | Hướng dẫn cho developer (setup, test, thêm model/tool/skill/workflow) |
 | [`kiro-integration.md`](kiro-integration.md) | Chi tiết định dạng file Kiro và xử lý sự cố Kiro |

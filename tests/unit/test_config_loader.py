@@ -159,3 +159,38 @@ def test_to_dict_round_trips(tmp_path: Path) -> None:
     assert again.skills == config.skills
     assert again.workflow.name == config.workflow.name
     assert again_path.is_file()
+
+
+def test_model_name_falls_back_to_environment_variable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Deployments can pin the model without editing YAML."""
+    monkeypatch.setenv("AGENT_KIT_MODEL", "gpt-4o")
+    _write(tmp_path, "model:\n  provider: openai\nworkflow:\n  name: requirement-analysis\n")
+
+    config = load_config(tmp_path)
+
+    assert config.model.name == "gpt-4o"
+
+
+def test_yaml_model_name_wins_over_environment_variable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.setenv("AGENT_KIT_MODEL", "from-env")
+    _write(
+        tmp_path,
+        "model:\n  provider: mock\n  name: from-yaml\n"
+        "workflow:\n  name: requirement-analysis\n",
+    )
+
+    assert load_config(tmp_path).model.name == "from-yaml"
+
+
+def test_missing_model_name_mentions_the_environment_variable(
+    tmp_path: Path, monkeypatch
+) -> None:
+    monkeypatch.delenv("AGENT_KIT_MODEL", raising=False)
+    _write(tmp_path, "model:\n  provider: openai\nworkflow:\n  name: requirement-analysis\n")
+
+    with pytest.raises(ConfigError, match="AGENT_KIT_MODEL"):
+        load_config(tmp_path)

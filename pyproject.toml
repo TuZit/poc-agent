@@ -1,6 +1,6 @@
 [project]
 name = "agent-kit-poc"
-version = "0.1.0"
+dynamic = ["version"]
 description = "Installable AI Agent Kit POC — spec-driven, configuration-over-hard-coding, inspired by GitHub Spec Kit"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -36,6 +36,10 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# Single source of truth for the version: agent_kit.__version__.
+[tool.hatch.version]
+path = "src/agent_kit/__init__.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_kit"]

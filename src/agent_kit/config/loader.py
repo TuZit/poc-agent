@@ -11,6 +11,7 @@ Design rules:
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -19,6 +20,10 @@ import yaml
 
 CONFIG_DIR_NAME = ".agent"
 CONFIG_FILE_NAME = "config.yaml"
+
+#: Environment variable used as the model name when ``model.name`` is absent.
+#: Deployment environments (containers, CI) can pin the model without editing YAML.
+DEFAULT_MODEL_ENV_VAR = "AGENT_KIT_MODEL"
 
 
 class ConfigError(Exception):
@@ -161,9 +166,12 @@ def load_config(project_root: Path | str = ".") -> AppConfig:
         raise ConfigError(
             f"model.provider is required in {path} (supported: openai, mock)."
         )
-    model_name = model_data.get("name")
+    model_name = model_data.get("name") or os.environ.get(DEFAULT_MODEL_ENV_VAR)
     if not model_name or not isinstance(model_name, str):
-        raise ConfigError(f"model.name is required in {path} (e.g. 'gpt-4o-mini').")
+        raise ConfigError(
+            f"model.name is required in {path} (e.g. 'gpt-4o-mini'). "
+            f"It can also be provided through the {DEFAULT_MODEL_ENV_VAR} environment variable."
+        )
     model = ModelSection(
         provider=provider.strip().lower(),
         name=model_name.strip(),
