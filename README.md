@@ -243,6 +243,9 @@ The suite uses `MockModel` everywhere and never needs `OPENAI_API_KEY` or networ
 access. The integration test performs the full POC flow: `init → config → run →
 output → evaluate → PASS`.
 
+> 🧪 **Thực hiện UAT?** Xem [`docs/uat-tutorial.md`](docs/uat-tutorial.md) — hướng
+> dẫn cài đặt & sử dụng kèm 35 test case nghiệm thu.
+
 ## Docker
 
 ```bash
@@ -459,6 +462,7 @@ dsh-build/
 
 | Document | Contents |
 | --- | --- |
+| [`docs/uat-tutorial.md`](docs/uat-tutorial.md) | **UAT guide (tiếng Việt)** — cài đặt, sử dụng, 35 test case nghiệm thu, xử lý sự cố |
 | [`docs/architecture.md`](docs/architecture.md) | layers, contracts, data flow, security model, extension seams |
 | [`docs/development.md`](docs/development.md) | local setup, tests, debugging, adding components, demo checklist |
 | [`docs/kiro-integration.md`](docs/kiro-integration.md) | Kiro file formats, MCP tools, hooks, steering, troubleshooting |
