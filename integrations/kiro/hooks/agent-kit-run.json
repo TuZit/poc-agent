@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "agent-kit: run requirement analysis",
+      "description": "Runs the configured workflow over the sample input and writes the output file. Trigger it by hand from the Kiro hooks panel.",
+      "trigger": "Manual",
+      "action": {
+        "type": "command",
+        "command": "{{AGENT_KIT_COMMAND}} run --input {{DEFAULT_INPUT}} --output {{DEFAULT_OUTPUT}}"
+      },
+      "timeout": 300,
+      "enabled": true
+    }
+  ]
+}

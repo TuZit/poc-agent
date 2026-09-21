@@ -1,0 +1,20 @@
+{
+  "name": "agent-kit",
+  "description": "Requirement analysis agent backed by the Agent Kit POC runtime, with agent-kit exposed as MCP tools.",
+  "prompt": "file://.kiro/steering/agent-kit.md",
+  "tools": ["read", "write", "@agent-kit"],
+  "allowedTools": [
+    "read",
+    "@agent-kit/agent_kit_capabilities",
+    "@agent-kit/agent_kit_evaluate",
+    "@agent-kit/agent_kit_read_skill"
+  ],
+  "resources": [
+    "file://README.md",
+    "file://.kiro/steering/**/*.md",
+    "file://.kiro/specs/agent-kit-poc/**/*.md",
+    "skill://.agent/skills/**/SKILL.md"
+  ],
+  "includeMcpJson": true,
+  "welcomeMessage": "Agent Kit POC ready. Check the environment with 'agent-kit doctor', then use the agent_kit_run_workflow MCP tool to analyse a requirement."
+}

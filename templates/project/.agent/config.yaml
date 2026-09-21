@@ -1,0 +1,33 @@
+# Agent Kit project configuration.
+#
+# Secrets are environment variables only — never put credentials in this file.
+# See .env.example in the agent-kit repository.
+#
+# Commands:
+#   agent-kit doctor          validate this file and the environment
+#   agent-kit config show     print the resolved configuration
+#   agent-kit config set model.provider mock
+#   agent-kit run             execute the configured workflow
+#   agent-kit evaluate output/sample-001.md
+
+agent:
+  name: {{PROJECT_NAME}}
+
+model:
+  provider: openai        # "openai" for a real model, "mock" for offline/deterministic runs
+  name: gpt-4o-mini
+  # options passed to the provider, e.g.:
+  # options:
+  #   temperature: 0.2
+
+tools:
+  filesystem:
+    enabled: true         # read/write files inside this project only
+  shell:
+    enabled: true         # whitelisted commands only: python, pytest, git
+
+skills:
+  - requirement-analysis
+
+workflow:
+  name: requirement-analysis

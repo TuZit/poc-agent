@@ -1,0 +1,24 @@
+# Build context hygiene for the Agent Kit image.
+.git
+.gitignore
+.venv
+venv
+__pycache__
+*.py[cod]
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+dist
+build
+*.egg-info
+output
+.env
+.env.*
+!.env.example
+docs
+specs
+.specify
+tests
+.DS_Store

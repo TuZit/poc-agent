@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Secrets — never commit real credentials
+.env
+.env.local
+*.local.env
+
+# Agent Kit / Kiro generated run artifacts
+output/
+.agent/local.yaml
+.kiro/settings/local.json
+
+# OS
+.DS_Store

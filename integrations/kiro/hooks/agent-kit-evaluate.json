@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "agent-kit: evaluate requirement summary on save",
+      "description": "After an output file is saved, verify deterministically that it exists, is not empty and contains every required section.",
+      "trigger": "PostFileSave",
+      "matcher": "output/.*\\.md$",
+      "action": {
+        "type": "command",
+        "command": "{{AGENT_KIT_COMMAND}} evaluate {{DEFAULT_OUTPUT}}"
+      },
+      "timeout": 60,
+      "enabled": true
+    }
+  ]
+}

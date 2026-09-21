@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "agent-kit": {
+      "command": "{{AGENT_KIT_COMMAND}}",
+      "args": ["mcp", "serve"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": [
+        "agent_kit_capabilities",
+        "agent_kit_evaluate",
+        "agent_kit_read_skill"
+      ]
+    }
+  }
+}

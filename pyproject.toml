@@ -1,0 +1,84 @@
+[project]
+name = "agent-kit-poc"
+version = "0.1.0"
+description = "Installable AI Agent Kit POC — spec-driven, configuration-over-hard-coding, inspired by GitHub Spec Kit"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Agent Kit POC" }]
+keywords = ["agent", "agent-kit", "spec-driven", "kiro", "poc"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+# Runtime dependencies are deliberately tiny. Provider SDKs live in extras so
+# the runtime and the tests never need an API key.
+dependencies = [
+    "typer>=0.12",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+openai = ["openai>=1.40"]
+
+[project.scripts]
+agent-kit = "agent_kit.cli.main:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/agent_kit"]
+
+# Assets stay at the repository root during development and are force-included
+# into the wheel as package data, so an installed `agent-kit` still finds its
+# skills, project templates, samples and integration templates.
+[tool.hatch.build.targets.wheel.force-include]
+"skills" = "agent_kit/_bundled/skills"
+"templates" = "agent_kit/_bundled/templates"
+"samples" = "agent_kit/_bundled/samples"
+"integrations" = "agent_kit/_bundled/integrations"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src",
+    "skills",
+    "templates",
+    "samples",
+    "integrations",
+    "tests",
+    "docs",
+    "specs",
+    ".specify",
+    "README.md",
+    "Dockerfile",
+    ".env.example",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "RUF"]
+ignore = [
+    # Typer's documented command signature uses typer.Option(...) as the default value.
+    "B008",
+    # Broad excepts are deliberate at the protocol/tool boundary: an MCP or tool
+    # failure must become a structured error, never a crashed server.
+    "BLE001",
+]

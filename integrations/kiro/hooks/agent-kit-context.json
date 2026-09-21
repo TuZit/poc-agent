@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "agent-kit: project capabilities",
+      "description": "Injects the resolved agent-kit configuration (model, tools, skills, workflow) into the prompt context. STDOUT of exit-0 UserPromptSubmit hooks is added to context.",
+      "trigger": "UserPromptSubmit",
+      "action": {
+        "type": "command",
+        "command": "{{AGENT_KIT_COMMAND}} mcp call agent_kit_capabilities"
+      },
+      "timeout": 30,
+      "enabled": true
+    }
+  ]
+}
