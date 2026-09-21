@@ -9,6 +9,7 @@ location behind a single helper so no other module needs to care.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 BUNDLED_DIR_NAME = "_bundled"
@@ -22,7 +23,20 @@ class AssetError(RuntimeError):
 
 
 def package_root() -> Path:
-    """Return the directory that contains the ``agent_kit`` package."""
+    """Return the directory that contains the ``agent_kit`` package.
+
+    Three layouts are supported:
+
+    * **installed wheel** — ``site-packages/agent_kit``
+    * **source checkout** — ``<repo>/src/agent_kit``
+    * **frozen binary** (PyInstaller) — ``<_MEIPASS>/agent_kit``, where the
+      bundled assets were placed next to the packaged modules
+    """
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        frozen = Path(meipass) / "agent_kit"
+        if frozen.is_dir():
+            return frozen
     return Path(__file__).resolve().parent
 
 

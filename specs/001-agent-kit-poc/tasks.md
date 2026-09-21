@@ -124,6 +124,18 @@ siblings. Each task lists the files it touches.
 - [x] **T069** Make the version single-sourced from `agent_kit.__version__` — `pyproject.toml`, `src/agent_kit/__init__.py`
 - [x] **T070** Support `AGENT_KIT_MODEL` as the model-name fallback for deployments — `src/agent_kit/config/loader.py`, `tests/unit/test_config_loader.py`
 
+## Phase 14 — End-user packaging (no Python) & integration registry
+
+- [x] **T071** Freeze a standalone binary with PyInstaller (assets bundled, `sys._MEIPASS` aware) — `packaging/agent-kit.spec`, `packaging/entrypoint.py`, `src/agent_kit/paths.py`
+- [x] **T072** Build script producing per-platform artifacts — `scripts/build-binary.sh`
+- [x] **T073** One-line installers for macOS/Linux and Windows — `packaging/install.sh`, `packaging/install.ps1`
+- [x] **T074** Verify the binary runs with an empty environment (`env -i`, no Python) including `init --ai kiro`, `run`, `evaluate`, `kiro status`, MCP handshake — `docs/end-user-install.md` §7.2
+- [x] **T075** Generalise integrations into a registry (`TemplateIntegration`, `INTEGRATION_REGISTRY`) with Kiro as the only registered tool this phase — `src/agent_kit/integrations/base.py`, `src/agent_kit/integrations/__init__.py`
+- [x] **T076** Add `agent-kit integration list|install|status|uninstall` and the `--integration/--ai` flag; keep `agent-kit kiro ...` as an alias — `src/agent_kit/cli/integration.py`, `src/agent_kit/cli/kiro.py`, `src/agent_kit/cli/init.py`, `src/agent_kit/cli/main.py`
+- [x] **T077** Unit-test the registry contract, name parsing, lifecycle and CLI — `tests/unit/test_integration_registry.py`
+- [x] **T078** [P] Write the end-user installation guide (binary/Docker/dev) — `docs/end-user-install.md`
+- [x] **T079** [P] Write the agent-integration guide with the seam and verified formats for future tools (Claude Code, Copilot, Codex) — `docs/agent-integrations.md`
+
 **Checkpoint F:** `uv tool install .` then the demo checklist in
 [`../../docs/development.md`](../../docs/development.md) passes.
 
@@ -146,8 +158,10 @@ Phase 1 ─► Phase 2 ─► Phase 3 ─► Phase 4 ─► Phase 5
 
 | Command | Result |
 | --- | --- |
-| `uv run pytest` | 166 passed, offline, no API key |
+| `uv run pytest` | 188 passed, offline, no API key |
 | `agent-kit doctor` (mock provider) | `Agent environment is ready.` |
 | `agent-kit run` + `agent-kit evaluate output/sample-001.md` | `Result: PASS` |
 | `agent-kit kiro status` | `Kiro integration is complete.` |
+| Binary with `env -i` (no Python) | `--version`, `init --ai kiro`, `run`, `evaluate` PASS, MCP handshake OK |
+| `agent-kit integration list` | only `kiro` registered (this phase) |
 | MCP `initialize` / `tools/list` / `tools/call` over stdio | 4 tools listed, calls return runtime results |

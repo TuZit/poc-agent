@@ -76,10 +76,17 @@ def test_init_force_overwrites(runner: CliRunner, tmp_path: Path) -> None:
     assert (target / "keep.txt").is_file()  # unrelated files are untouched
 
 
-def test_init_rejects_unknown_ai(runner: CliRunner, tmp_path: Path) -> None:
-    result = runner.invoke(app, ["init", str(tmp_path / "p"), "--ai", "copilot"])
+def test_init_rejects_unknown_integration(runner: CliRunner, tmp_path: Path) -> None:
+    target = tmp_path / "p"
+
+    result = runner.invoke(app, ["init", str(target), "--ai", "does-not-exist"])
+
     assert result.exit_code == 1
-    assert "Unknown --ai value" in _out(result)
+    output = _out(result)
+    assert "Unknown integration" in output
+    assert "Available integrations" in output
+    # A typo must not leave a half-scaffolded project behind.
+    assert not target.exists()
 
 
 # --- config ---------------------------------------------------------------

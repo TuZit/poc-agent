@@ -71,7 +71,25 @@ ls             # phải thấy pyproject.toml, src/, skills/, integrations/
 
 ## 3. Cài đặt Agent Kit
 
-Có 2 lựa chọn — chọn **cách A** nếu chỉ test offline, chọn **cách B** nếu muốn test với model thật.
+Chọn **cách 0** nếu máy bạn không có Python (chỉ cần Terminal). Chọn **cách A** nếu
+chỉ test offline, **cách B** nếu muốn test với model thật.
+
+### Cách 0 — Không cần Python (binary standalone)
+
+```bash
+# nếu đội phát hành đã có host release:
+curl -fsSL https://YOUR-HOST/agent-kit/install.sh | sh
+
+# hoặc cài thủ công từ file binary được cung cấp:
+mkdir -p ~/.local/bin
+cp agent-kit-darwin-arm64 ~/.local/bin/agent-kit    # đúng bản với máy bạn: uname -m
+chmod +x ~/.local/bin/agent-kit
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Kiểm tra: `agent-kit --version` → `agent-kit 0.1.0`. Toàn bộ phần còn lại của tài
+liệu áp dụng y hệt. Chi tiết + xử lý sự cố macOS/Windows:
+[`end-user-install.md`](end-user-install.md).
 
 ### Cách A — Bản offline (khuyến nghị cho UAT, không cần API key)
 
@@ -362,6 +380,7 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 | UAT-03 | Khởi tạo project | `agent-kit init demo-project --ai kiro` | Tạo `.agent/config.yaml`, `README.md`, `samples/`, `.kiro/` | ☐ |
 | UAT-04 | *(Negative)* Chống ghi đè | Chạy lại `agent-kit init demo-project` | **Thoát mã 1**, báo "already exists", **không** thay đổi file nào | ☐ |
 | UAT-05 | Ghi đè có chủ đích | `agent-kit init demo-project --force` | Thoát mã 0, file template được phục hồi, file lạ vẫn còn | ☐ |
+| UAT-05b | *(chỉ khi dùng binary)* Không cần Python | `env -i HOME="$HOME" PATH=/usr/bin:/bin agent-kit --version` rồi `init`/`run`/`evaluate` | Mọi lệnh chạy được dù môi trường trống, `Result: PASS` | ☐ |
 
 ### 9.2 Nhóm B — Cấu hình & chẩn đoán
 
@@ -407,7 +426,7 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 
 | ID | Kịch bản | Các bước | Kết quả mong đợi | KQ |
 |---|---|---|---|---|
-| UAT-31 | Toàn bộ test suite | `cd dsh-build && uv run pytest` | `166 passed`, **không cần** `OPENAI_API_KEY`, không cần mạng | ☐ |
+| UAT-31 | Toàn bộ test suite | `cd dsh-build && uv run pytest` | `188 passed`, **không cần** `OPENAI_API_KEY`, không cần mạng | ☐ |
 | UAT-32 | Filesystem bị giới hạn | `uv run pytest tests/unit/test_tools.py -k traversal` | Test PASS: ghi ra ngoài project root bị từ chối | ☐ |
 | UAT-33 | Shell bị giới hạn | `uv run pytest tests/unit/test_tools.py -k whitelist` | Test PASS: lệnh ngoài whitelist (`bash`, `echo`...) bị từ chối | ☐ |
 | UAT-34 | Không lộ secret | `cat .agent/config.yaml` | Không có API key trong file; key chỉ nằm ở biến môi trường | ☐ |
@@ -423,7 +442,7 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 2. `agent-kit doctor` báo `Agent environment is ready.` ở cấu hình `mock`.
 3. `agent-kit evaluate output/sample-001.md` trả `Result: PASS`.
 4. `agent-kit kiro status` trả `Kiro integration is complete.`
-5. `uv run pytest` trả `166 passed` **khi đã unset `OPENAI_API_KEY`** (chứng minh test offline).
+5. `uv run pytest` trả `188 passed` **khi đã unset `OPENAI_API_KEY`** (chứng minh test offline).
 6. Không có lỗi crash/traceback Python nào khi chạy các kịch bản trên (ngoại trừ các negative test được mô tả là phải thoát mã 1 với thông báo thân thiện).
 
 **FAIL** nếu: có traceback Python thô, CLI treo, ghi được ra ngoài project root, thực thi được lệnh ngoài whitelist, hoặc file cấu hình chứa secret.
@@ -435,6 +454,8 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 | Hiện tượng | Nguyên nhân | Cách xử lý |
 |---|---|---|
 | `command not found: agent-kit` | `~/.local/bin` chưa có trong PATH | `export PATH="$HOME/.local/bin:$PATH"` (thêm vào `~/.zshrc`) |
+| macOS chặn binary: *"developer cannot be verified"* | File tải bằng trình duyệt bị gắn cờ cách ly | `xattr -d com.apple.quarantine ~/.local/bin/agent-kit` |
+| `bad CPU type in executable` | Tải nhầm bản Intel/Apple Silicon | Kiểm tra `uname -m` rồi lấy đúng bản (`arm64` / `x86_64`) |
 | `command not found: uv` | Chưa cài `uv` | Chạy lại mục 2.2 |
 | `Configuration not found at .../.agent/config.yaml` | Đang chạy ngoài thư mục project | `cd demo-project`, hoặc thêm `--project /đường/dẫn/project` |
 | `OPENAI_API_KEY is not set` | Dùng provider `openai` nhưng chưa export key | `export OPENAI_API_KEY=...` hoặc `agent-kit config set model.provider mock` |
@@ -549,7 +570,9 @@ demo-project/
 | Tài liệu | Nội dung |
 |---|---|
 | [`../README.md`](../README.md) | Tổng quan sản phẩm, kiến trúc, hướng dẫn mở rộng |
-| [`packaging-deployment.md`](packaging-deployment.md) | Đóng gói (wheel/Docker) và triển khai (CI/CD, secret, rollback) |
+| [`end-user-install.md`](end-user-install.md) | Cài đặt cho người dùng không có Python (binary, 1 lệnh) |
+| [`packaging-deployment.md`](packaging-deployment.md) | Đóng gói (wheel/binary/Docker) và triển khai (CI/CD, secret, rollback) |
+| [`agent-integrations.md`](agent-integrations.md) | Kiến trúc tích hợp agent tool (hiện tại: Kiro) |
 | [`architecture.md`](architecture.md) | Kiến trúc phân lớp, mô hình bảo mật |
 | [`development.md`](development.md) | Hướng dẫn cho developer (setup, test, thêm model/tool/skill/workflow) |
 | [`kiro-integration.md`](kiro-integration.md) | Chi tiết định dạng file Kiro và xử lý sự cố Kiro |

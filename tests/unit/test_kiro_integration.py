@@ -228,18 +228,18 @@ def test_uninstall_removes_managed_files_and_keeps_user_files(kiro_project: Path
 def test_cli_kiro_install_and_status(runner, kiro_project: Path) -> None:
     install = runner.invoke(app, ["kiro", "install", "--project", str(kiro_project)])
     assert install.exit_code == 0, _out(install)
-    assert "Kiro integration installed" in _out(install)
+    assert "Kiro integration — 13 file(s)" in _out(install)
 
     status = runner.invoke(app, ["kiro", "status", "--project", str(kiro_project)])
     assert status.exit_code == 0, _out(status)
-    assert "Kiro integration is complete." in _out(status)
+    assert "All requested integrations are complete." in _out(status)
 
 
 def test_cli_kiro_status_fails_when_missing(runner, kiro_project: Path) -> None:
     result = runner.invoke(app, ["kiro", "status", "--project", str(kiro_project)])
 
     assert result.exit_code == 1
-    assert "agent-kit kiro install" in _out(result)
+    assert "agent-kit integration install kiro" in _out(result)
 
 
 def test_cli_kiro_uninstall(runner, kiro_project: Path) -> None:
@@ -262,4 +262,4 @@ def test_init_with_ai_kiro_installs_the_integration(runner, tmp_path: Path) -> N
     assert (project / ".agent" / "config.yaml").is_file()
     assert (project / STEERING).is_file()
     assert (project / ".kiro" / "settings" / "mcp.json").is_file()
-    assert "Kiro integration installed" in _out(result)
+    assert "Kiro integration — 13 file(s)" in _out(result)

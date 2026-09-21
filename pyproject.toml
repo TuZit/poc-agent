@@ -32,6 +32,10 @@ dev = [
     "pytest>=8.0",
     "ruff>=0.6",
 ]
+# Build-time only: freezing the standalone binary for users without Python.
+package = [
+    "pyinstaller>=6.0",
+]
 
 [build-system]
 requires = ["hatchling"]
@@ -60,6 +64,8 @@ include = [
     "templates",
     "samples",
     "integrations",
+    "packaging",
+    "scripts",
     "tests",
     "docs",
     "specs",

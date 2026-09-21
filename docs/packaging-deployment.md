@@ -15,6 +15,8 @@
 |---|---|---|
 | **Wheel** `dist/agent_kit_poc-<ver>-py3-none-any.whl` | `uv build` | Kênh phân phối chính — cài bằng `uv tool` / `pipx` / `pip` |
 | **Sdist** `dist/agent_kit_poc-<ver>.tar.gz` | `uv build` | Build lại từ source (audit, rebuild nội bộ) |
+| **Binary standalone** `agent-kit-<os>-<arch>` | `bash scripts/build-binary.sh` | Người dùng cuối **không có Python** (PyInstaller, ~20 MB) |
+| **Installer** `install.sh` / `install.ps1` | có sẵn trong `packaging/` | Cài binary bằng 1 lệnh (`curl \| sh`) |
 | **Docker image** `agent-kit-poc` | `docker build` | Chạy trong container, CI, môi trường cô lập |
 | **Bundle asset** (`skills/`, `templates/`, `samples/`, `integrations/`) | tự động | Được nhúng **bên trong wheel** — không phát hành rời |
 | **Lock file** `uv.lock` | `uv lock` | Tái lập chính xác cây dependency |
@@ -127,7 +129,7 @@ agent_kit/_bundled/skills 2 file(s)
 agent_kit/_bundled/templates 2 file(s)
 agent_kit/_bundled/samples 2 file(s)
 agent_kit/_bundled/integrations 12 file(s)
-tổng file trong wheel: 61
+tổng file trong wheel: 63
 ```
 
 Kiểm chứng lúc runtime rằng asset đang lấy từ bản **đã cài** (không phải source):
@@ -219,7 +221,7 @@ agent-kit kiro status                               # → Kiro integration is co
 
 | ☐ | Việc | Lệnh |
 |---|---|---|
-| ☐ | Test xanh, offline | `uv run pytest` (166 passed) |
+| ☐ | Test xanh, offline | `uv run pytest` (188 passed) |
 | ☐ | Lint sạch | `uv run ruff check src tests` |
 | ☐ | Lock còn khớp | `uv lock --check` |
 | ☐ | Version đã bump + khớp metadata | mục 4 |
@@ -250,6 +252,68 @@ uv tool install dist/agent_kit_poc-0.1.0-py3-none-any.whl --force
 ```
 
 ---
+
+### 7.1 Binary standalone — cho người dùng không có Python
+
+Người dùng cuối chỉ cần 1 file thực thi; **không cần Python, pip hay uv**.
+
+```bash
+cd dsh-build
+bash scripts/build-binary.sh
+# → dist/bin/agent-kit-darwin-arm64   (~20 MB, tuỳ nền tảng)
+```
+
+Cách hoạt động:
+
+| Thành phần | Vai trò |
+|---|---|
+| `packaging/agent-kit.spec` | PyInstaller spec: một file, console app, nhúng asset vào `agent_kit/_bundled/*` |
+| `packaging/entrypoint.py` | Entry point giống console script `agent-kit` |
+| `scripts/build-binary.sh` | Sync group `package` + extra `openai`, build, đổi tên artifact theo nền tảng |
+| `src/agent_kit/paths.py` | `package_root()` nhận cả `sys._MEIPASS` → asset resolve đúng trong binary đã freeze |
+| `packaging/install.sh` / `install.ps1` | Tải binary theo OS/arch, cài vào `~/.local/bin`, kiểm tra `--version`, nhắc `PATH` |
+
+Quy ước tên artifact (installer phụ thuộc vào tên này):
+
+```text
+agent-kit-darwin-arm64      agent-kit-linux-x86_64
+agent-kit-darwin-x86_64     agent-kit-linux-arm64
+agent-kit-windows-x86_64.exe
+```
+
+Phát hành lên host, ví dụ GitHub Releases:
+
+```bash
+gh release create v0.1.0 dist/bin/agent-kit-darwin-arm64 dist/bin/agent-kit-linux-x86_64 \
+  --title "Agent Kit POC v0.1.0"
+```
+
+Người dùng cài:
+
+```bash
+curl -fsSL https://YOUR-HOST/agent-kit/install.sh | sh
+AGENT_KIT_VERSION=0.2.0 AGENT_KIT_INSTALL_DIR="$HOME/bin" \
+  curl -fsSL https://YOUR-HOST/agent-kit/install.sh | sh   # tuỳ chọn
+```
+
+Kiểm tra **không có Python** trong môi trường (đây là bài test bắt buộc trước khi phát hành):
+
+```bash
+BIN=dist/bin/agent-kit-darwin-arm64
+env -i HOME="$HOME" PATH=/usr/bin:/bin "$BIN" --version
+env -i HOME="$HOME" PATH=/usr/bin:/bin "$BIN" init /tmp/x --ai kiro
+```
+
+Lưu ý:
+
+- `env -i` xoá sạch môi trường: nếu lệnh chạy được nghĩa là binary thực sự độc lập.
+- Binary build kèm extra `openai`, nên dùng được cả `model.provider: openai` và `mock`.
+- Windows: chạy `pyinstaller packaging/agent-kit.spec` trên runner Windows rồi đổi tên
+  thành `agent-kit-windows-x86_64.exe` (chưa build/kiểm chứng trong phase này).
+- macOS: binary chưa ký số (unsigned). Nếu người dùng tải qua trình duyệt và bị chặn,
+  xử lý bằng `xattr -d com.apple.quarantine ~/.local/bin/agent-kit`.
+- Trong binary, `integrations/` chỉ chứa Kiro (phase này) — xem
+  [`agent-integrations.md`](agent-integrations.md).
 
 ## 8. Triển khai bằng Docker
 

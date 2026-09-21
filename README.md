@@ -45,7 +45,8 @@ Install → Init → Configure → Load skill → Run agent → Use tools → Ge
 
 | Capability | Status |
 | --- | --- |
-| `agent-kit` CLI (`init`, `doctor`, `config`, `run`, `evaluate`, `kiro`, `mcp`) | ✅ |
+| `agent-kit` CLI (`init`, `doctor`, `config`, `run`, `evaluate`, `integration`, `kiro`, `mcp`) | ✅ |
+| Standalone binary + one-line installer (no Python for end users) | ✅ |
 | Project scaffolding from a bundled template | ✅ |
 | `.agent/config.yaml` configuration, secrets from the environment | ✅ |
 | `Model` abstraction: `OpenAIModel` + deterministic `MockModel` | ✅ |
@@ -54,7 +55,7 @@ Install → Init → Configure → Load skill → Run agent → Use tools → Ge
 | `requirement-analysis` workflow | ✅ |
 | Sample input + expected output | ✅ |
 | Deterministic evaluator (no LLM judge) | ✅ |
-| Unit + integration tests, offline (166 tests) | ✅ |
+| Unit + integration tests, offline (188 tests) | ✅ |
 | Docker image | ✅ |
 | Kiro integration (steering, hooks, prompts, custom agent, MCP server, specs) | ✅ |
 
@@ -90,16 +91,23 @@ evaluation`. The runtime never imports the CLI, so it can be embedded anywhere.
 
 ## Installation
 
+**End users (no Python required)** — download the self-contained binary:
+
 ```bash
-# from the project directory
-uv tool install .                    # installs the `agent-kit` binary
-uv tool install '.[openai]'          # ... with the OpenAI provider extra
+curl -fsSL https://YOUR-HOST/agent-kit/install.sh | sh   # macOS / Linux
+irm https://YOUR-HOST/agent-kit/install.ps1 | iex        # Windows (PowerShell)
 ```
 
-During development:
+The binary bundles the runtime, skills, project template and the Kiro
+integration. See [`docs/end-user-install.md`](docs/end-user-install.md) for the
+manual install and troubleshooting.
+
+**Developers** — install the package:
 
 ```bash
-uv sync --all-extras                 # create .venv with dev tools
+uv tool install .                    # from the project directory
+uv tool install '.[openai]'          # ... with the OpenAI provider extra
+uv sync --all-extras                 # or a dev checkout: .venv + pytest + ruff
 uv run agent-kit --help
 ```
 
@@ -263,11 +271,20 @@ No secret is baked into the image, and the process runs as a non-root user.
 
 ## Kiro integration
 
+Kiro is the agent tool integrated in this phase. It is installed through a
+generic integration registry (`--integration` / `agent-kit integration ...`), so
+other tools can be added later without touching the CLI — see
+[`docs/agent-integrations.md`](docs/agent-integrations.md).
+
 ```bash
-agent-kit init my-project --ai kiro     # at scaffold time
-agent-kit kiro install                  # or later, inside the project
-agent-kit kiro status                   # check what is present
-agent-kit kiro uninstall                # remove only the managed files
+agent-kit init my-project --ai kiro          # at scaffold time (--ai is an alias)
+agent-kit init my-project --integration kiro # same thing, canonical flag
+agent-kit integration list                   # registered integrations + install state
+agent-kit integration install kiro           # or later, inside the project
+agent-kit integration status                 # check what is present
+agent-kit integration uninstall kiro --yes   # remove only the managed files
+
+agent-kit kiro install | status | uninstall  # shorthand alias
 ```
 
 This writes:
@@ -462,7 +479,9 @@ dsh-build/
 
 | Document | Contents |
 | --- | --- |
+| [`docs/end-user-install.md`](docs/end-user-install.md) | **Cài đặt cho người dùng cuối (tiếng Việt)** — binary không cần Python, Docker, xử lý sự cố |
 | [`docs/uat-tutorial.md`](docs/uat-tutorial.md) | **UAT guide (tiếng Việt)** — cài đặt, sử dụng, 35 test case nghiệm thu, xử lý sự cố |
+| [`docs/agent-integrations.md`](docs/agent-integrations.md) | **Tích hợp agent tool (tiếng Việt)** — kiến trúc registry, cách thêm tool mới, tham chiếu format |
 | [`docs/packaging-deployment.md`](docs/packaging-deployment.md) | **Packaging & deployment (tiếng Việt)** — build wheel, nhúng asset, Docker, CI/CD, secret, rollback |
 | [`docs/architecture.md`](docs/architecture.md) | layers, contracts, data flow, security model, extension seams |
 | [`docs/development.md`](docs/development.md) | local setup, tests, debugging, adding components, demo checklist |

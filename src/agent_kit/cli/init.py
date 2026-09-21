@@ -7,9 +7,14 @@ from pathlib import Path
 import typer
 
 from agent_kit.cli.common import fail, info, relative_to
+from agent_kit.cli.integration import install_integrations
+from agent_kit.integrations import (
+    IntegrationError,
+    available_integrations,
+    parse_integration_names,
+    resolve_integrations,
+)
 from agent_kit.scaffold import ScaffoldError, init_project
-
-AI_CHOICES = ("none", "kiro")
 
 
 def init_command(
@@ -17,16 +22,28 @@ def init_command(
     force: bool = typer.Option(
         False, "--force", "-f", help="Overwrite an existing non-empty directory."
     ),
-    ai: str = typer.Option(
-        "none",
+    integration: list[str] | None = typer.Option(
+        None,
+        "--integration",
         "--ai",
-        help="Also install an assistant integration after scaffolding: none | kiro.",
+        "-i",
+        help=(
+            "Agent-tool integration(s) to install: "
+            f"{', '.join(available_integrations())} — comma-separated or repeated. "
+            "Use 'all' for every integration."
+        ),
     ),
 ) -> None:
     """Create a new agent-kit project (.agent/config.yaml, README, samples)."""
-    choice = ai.strip().lower()
-    if choice not in AI_CHOICES:
-        fail(f"Unknown --ai value '{ai}'. Supported: {', '.join(AI_CHOICES)}.")
+    requested = parse_integration_names(integration)
+    if "all" in requested:
+        requested = available_integrations()
+    try:
+        # Validate names before touching the filesystem: a typo must not leave a
+        # half-scaffolded project behind.
+        resolve_integrations(requested)
+    except IntegrationError as exc:
+        fail(str(exc))
 
     try:
         written = init_project(project, force=force)
@@ -38,17 +55,9 @@ def init_command(
     for path in sorted(written):
         info(f"  + {relative_to(path, target)}")
 
-    if choice == "kiro":
-        from agent_kit.integrations.kiro import KiroIntegrationError, install_kiro
-
-        try:
-            kiro_files = install_kiro(target, force=force)
-        except KiroIntegrationError as exc:
-            fail(str(exc))
+    if requested:
         info("")
-        info("✓ Kiro integration installed")
-        for path in sorted(kiro_files):
-            info(f"  + {relative_to(path, target)}")
+        install_integrations(requested, target, force=force)
 
     info("")
     info("Next steps:")

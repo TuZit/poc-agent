@@ -64,8 +64,14 @@ app.add_typer(config_app, name="config")
 def _register_optional_commands() -> None:
     """Register integrations that may be unavailable in a slim installation."""
     try:
-        from agent_kit.cli.kiro import kiro_app
+        from agent_kit.cli.integration import integration_app
     except ImportError:  # pragma: no cover - integration module always ships
+        return
+    app.add_typer(integration_app, name="integration")
+
+    try:
+        from agent_kit.cli.kiro import kiro_app
+    except ImportError:  # pragma: no cover
         return
     app.add_typer(kiro_app, name="kiro")
 
