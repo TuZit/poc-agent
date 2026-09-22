@@ -102,3 +102,23 @@ def test_init_project_force_restores_template(tmp_path: Path) -> None:
     init_project(target, force=True)
 
     assert "provider: openai" in (target / ".agent" / "config.yaml").read_text(encoding="utf-8")
+
+
+def test_init_project_preserves_an_existing_readme(tmp_path: Path) -> None:
+    """Adopting agent-kit in an existing repo must not replace its README."""
+    target = tmp_path / "existing-repo"
+    target.mkdir()
+    (target / "README.md").write_text("# My project\n\nDo not lose me.\n", encoding="utf-8")
+
+    written = init_project(target, force=True)
+
+    assert (target / "README.md").read_text(encoding="utf-8").startswith("# My project")
+    assert (target / ".agent" / "config.yaml").is_file()
+    assert target / "README.md" not in written
+    assert len(written) == 9  # 1 template file + 8 samples
+
+
+def test_init_project_still_writes_the_template_readme_when_absent(tmp_path: Path) -> None:
+    target = tmp_path / "fresh"
+    init_project(target)
+    assert "# fresh" in (target / "README.md").read_text(encoding="utf-8")

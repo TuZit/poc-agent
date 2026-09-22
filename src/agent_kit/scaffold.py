@@ -6,6 +6,7 @@ Used by ``agent-kit init`` and by assistant integrations (``agent-kit kiro``).
 from __future__ import annotations
 
 import shutil
+from collections.abc import Iterable
 from pathlib import Path
 
 from agent_kit.paths import AssetError, samples_dir, templates_dir
@@ -32,12 +33,25 @@ def render(text: str, mapping: dict[str, str]) -> str:
     return rendered
 
 
-def copy_tree(source: Path, target: Path, mapping: dict[str, str] | None = None) -> list[Path]:
+def copy_tree(
+    source: Path,
+    target: Path,
+    mapping: dict[str, str] | None = None,
+    preserve: Iterable[str] = (),
+) -> list[Path]:
     """Copy ``source`` into ``target``, rendering text files.
 
-    Returns the list of files written.
+    Args:
+        mapping: ``{{PLACEHOLDER}}`` values.
+        preserve: relative paths (POSIX form) that must never be overwritten when
+            they already exist, even with ``force``. Used for files a real project
+            already owns, such as ``README.md``.
+
+    Returns:
+        The list of files written.
     """
     mapping = mapping or {}
+    keep = set(preserve)
     if not source.is_dir():
         raise ScaffoldError(f"Template directory not found: {source}")
 
@@ -48,6 +62,9 @@ def copy_tree(source: Path, target: Path, mapping: dict[str, str] | None = None)
 
         if path.is_dir():
             destination.mkdir(parents=True, exist_ok=True)
+            continue
+
+        if relative.as_posix() in keep and destination.exists():
             continue
 
         destination.parent.mkdir(parents=True, exist_ok=True)
@@ -76,20 +93,31 @@ def ensure_writable_target(target: Path, force: bool = False) -> None:
         )
 
 
+#: Template files that must never overwrite a file the project already has.
+#: Adopting agent-kit in an existing repository must not replace its README.
+PRESERVED_PROJECT_FILES: tuple[str, ...] = ("README.md",)
+
+
 def init_project(
     target: Path | str,
     force: bool = False,
     template: str = DEFAULT_PROJECT_TEMPLATE,
     include_samples: bool = True,
+    preserve: Iterable[str] = PRESERVED_PROJECT_FILES,
 ) -> list[Path]:
-    """Create a new agent-kit project from the bundled template."""
+    """Create a new agent-kit project from the bundled template.
+
+    ``preserve`` lists template files that are skipped when they already exist
+    (default: ``README.md``), so ``init --force`` inside an existing repository
+    adds ``.agent/config.yaml`` without clobbering the project's own README.
+    """
     target_path = Path(target)
     ensure_writable_target(target_path, force=force)
 
     template_root = templates_dir() / template
     mapping = {"PROJECT_NAME": target_path.resolve().name}
 
-    written = copy_tree(template_root, target_path, mapping)
+    written = copy_tree(template_root, target_path, mapping, preserve=preserve)
     if include_samples:
         try:
             written += copy_tree(samples_dir(), target_path / "samples", mapping)
