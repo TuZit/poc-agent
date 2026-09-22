@@ -228,7 +228,7 @@ def test_uninstall_removes_managed_files_and_keeps_user_files(kiro_project: Path
 def test_cli_kiro_install_and_status(runner, kiro_project: Path) -> None:
     install = runner.invoke(app, ["kiro", "install", "--project", str(kiro_project)])
     assert install.exit_code == 0, _out(install)
-    assert "Kiro integration — 13 file(s)" in _out(install)
+    assert "Kiro integration — 21 file(s)" in _out(install)
 
     status = runner.invoke(app, ["kiro", "status", "--project", str(kiro_project)])
     assert status.exit_code == 0, _out(status)
@@ -262,4 +262,108 @@ def test_init_with_ai_kiro_installs_the_integration(runner, tmp_path: Path) -> N
     assert (project / ".agent" / "config.yaml").is_file()
     assert (project / STEERING).is_file()
     assert (project / ".kiro" / "settings" / "mcp.json").is_file()
-    assert "Kiro integration — 13 file(s)" in _out(result)
+    assert "Kiro integration — 21 file(s)" in _out(result)
+
+
+# --- multi-agent artifacts ------------------------------------------------
+def test_kiro_ships_every_agent_artifact(kiro_project: Path) -> None:
+    install_kiro(kiro_project)
+    kiro = kiro_project / ".kiro"
+
+    assert sorted(path.name for path in (kiro / "steering").glob("*.md")) == [
+        "agent-kit-code-review.md",
+        "agent-kit-requirements.md",
+        "agent-kit-unit-test.md",
+        "agent-kit.md",
+    ]
+    assert sorted(path.name for path in (kiro / "prompts").glob("*.md")) == [
+        "agent-kit.code-review.md",
+        "agent-kit.evaluate.md",
+        "agent-kit.orchestrate.md",
+        "agent-kit.run.md",
+        "agent-kit.unit-test.md",
+    ]
+    assert sorted(path.name for path in (kiro / "agents").glob("*.json")) == [
+        "agent-kit.json",
+        "code-review.json",
+        "unit-test.json",
+    ]
+    assert sorted(path.name for path in (kiro / "hooks").glob("*.json")) == [
+        "agent-kit-context.json",
+        "agent-kit-evaluate.json",
+        "agent-kit-orchestrate.json",
+        "agent-kit-run.json",
+    ]
+
+
+def test_agent_prompts_target_their_workflow(kiro_project: Path) -> None:
+    install_kiro(kiro_project)
+    prompts = kiro_project / ".kiro" / "prompts"
+
+    code_review = (prompts / "agent-kit.code-review.md").read_text(encoding="utf-8")
+    unit_test = (prompts / "agent-kit.unit-test.md").read_text(encoding="utf-8")
+    orchestrate = (prompts / "agent-kit.orchestrate.md").read_text(encoding="utf-8")
+
+    assert 'workflow: "code-review"' in code_review
+    assert "sample-code-review.md" in code_review
+    assert 'workflow: "unit-test-generation"' in unit_test
+    assert "sample-unit-test.md" in unit_test
+    assert "agent_kit_orchestrate" in orchestrate
+
+
+def test_custom_agents_are_valid_and_read_only_by_default(kiro_project: Path) -> None:
+    install_kiro(kiro_project)
+    agents_dir = kiro_project / ".kiro" / "agents"
+
+    names = set()
+    for path in sorted(agents_dir.glob("*.json")):
+        agent = json.loads(path.read_text(encoding="utf-8"))
+        names.add(agent["name"])
+        assert agent["description"]
+        assert agent["tools"]
+        assert agent["includeMcpJson"] is True
+        assert all(
+            tool.startswith("@agent-kit/") and "run_workflow" not in tool
+            for tool in agent["allowedTools"]
+            if tool != "read"
+        )
+
+    assert names == {"agent-kit", "code-review", "unit-test"}
+
+
+def test_agent_steering_files_declare_filematch_patterns(kiro_project: Path) -> None:
+    install_kiro(kiro_project)
+    steering = kiro_project / ".kiro" / "steering"
+
+    code_review = (steering / "agent-kit-code-review.md").read_text(encoding="utf-8")
+    unit_test = (steering / "agent-kit-unit-test.md").read_text(encoding="utf-8")
+
+    assert "inclusion: fileMatch" in code_review
+    assert "samples/code-review" in code_review
+    assert "inclusion: fileMatch" in unit_test
+    assert "samples/unit-test-generation" in unit_test
+
+
+def test_orchestrate_hook_runs_the_orchestrator(kiro_project: Path) -> None:
+    install_kiro(kiro_project)
+    hook = json.loads(
+        (kiro_project / ".kiro" / "hooks" / "agent-kit-orchestrate.json").read_text("utf-8")
+    )
+
+    assert hook["version"] == "v1"
+    entry = hook["hooks"][0]
+    assert entry["trigger"] == "Manual"
+    assert "run --workflow orchestration" in entry["action"]["command"]
+    assert entry["timeout"] >= 600
+
+
+def test_autoapprove_covers_only_read_only_tools(kiro_project: Path) -> None:
+    install_kiro(kiro_project)
+    settings = json.loads(
+        (kiro_project / ".kiro" / "settings" / "mcp.json").read_text(encoding="utf-8")
+    )
+
+    approved = set(settings["mcpServers"]["agent-kit"]["autoApprove"])
+    assert "agent_kit_list_agents" in approved
+    assert "agent_kit_run_workflow" not in approved
+    assert "agent_kit_orchestrate" not in approved

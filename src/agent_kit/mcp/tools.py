@@ -21,7 +21,14 @@ from agent_kit.skills import SkillError, SkillLoader
 from agent_kit.skills.loader import project_skills_dir
 from agent_kit.tools import available_tools, create_enabled_tools
 from agent_kit.tools.base import ToolError
-from agent_kit.workflow import available_workflows
+from agent_kit.workflow import (
+    available_specialists,
+    available_workflows,
+    specialist_workflows,
+)
+
+#: Workflow name that dispatches to the specialist agents.
+ORCHESTRATION_WORKFLOW = "orchestration"
 
 
 @dataclass(frozen=True)
@@ -83,11 +90,18 @@ def run_workflow(arguments: dict[str, Any], project_root: Path) -> str:
     except (ConfigError, ToolError) as exc:
         raise MCPToolError(str(exc)) from exc
 
+    options: dict[str, Any] = {}
+    if arguments.get("agents"):
+        options["agents"] = arguments["agents"]
+    if arguments.get("strategy"):
+        options["strategy"] = arguments["strategy"]
+
     try:
         result = runtime.run_workflow(
             str(input_text),
             workflow_name=arguments.get("workflow"),
             skill_name=arguments.get("skill"),
+            options=options,
         )
     except Exception as exc:  # surfaced to the client as an MCP tool error
         raise MCPToolError(f"Workflow failed: {exc}") from exc
@@ -97,6 +111,9 @@ def run_workflow(arguments: dict[str, Any], project_root: Path) -> str:
         f"valid: {result.valid}",
         f"tool_calls: {result.tool_call_count}",
     ]
+    if result.metadata.get("selected_agents"):
+        header.append(f"selected_agents: {', '.join(result.metadata['selected_agents'])}")
+        header.append(f"strategy: {result.metadata.get('strategy')}")
     for issue in result.issues:
         header.append(f"issue: {issue}")
 
@@ -132,6 +149,50 @@ def evaluate(arguments: dict[str, Any], project_root: Path) -> str:
     return result.render()
 
 
+def orchestrate(arguments: dict[str, Any], project_root: Path) -> str:
+    """Analyse a request, select specialist agents and run them (the orchestrator)."""
+    delegated = dict(arguments)
+    delegated["workflow"] = ORCHESTRATION_WORKFLOW
+    return run_workflow(delegated, project_root)
+
+
+def list_agents(arguments: dict[str, Any], project_root: Path) -> str:
+    """Describe the specialist agents, their contracts and the orchestrator setup."""
+    try:
+        config = load_config(project_root)
+    except ConfigError:
+        config = None
+
+    enabled = set(config.orchestrator.agents) if config else set()
+    lines = ["Specialist agents", ""]
+    for workflow in specialist_workflows():
+        lines.append(f"- {workflow.name} — {workflow.display_title()}")
+        lines.append(f"  when to use: {workflow.description}")
+        lines.append(f"  skill: {workflow.default_skill or '(none)'}")
+        lines.append(f"  required sections: {', '.join(workflow.required_sections)}")
+        if workflow.default_input:
+            lines.append(f"  sample input: {workflow.default_input}")
+        lines.append(
+            f"  enabled for orchestration: {'yes' if workflow.name in enabled else 'no'}"
+        )
+
+    if config is not None:
+        lines += [
+            "",
+            f"orchestrator: strategy={config.orchestrator.strategy} "
+            f"planner={config.orchestrator.planner}",
+            "orchestrator fallback agents: "
+            f"{', '.join(config.orchestrator.default_agents) or '(none)'}",
+        ]
+
+    lines += [
+        "",
+        "Run one agent: call agent_kit_run_workflow with workflow=<agent-name>.",
+        "Let the orchestrator choose: call agent_kit_orchestrate.",
+    ]
+    return "\n".join(lines)
+
+
 def workflow_output_schema(arguments: dict[str, Any], project_root: Path) -> str:
     """Return the section structure a workflow output must satisfy."""
     lines = ["Required sections for a valid requirement-analysis output:", ""]
@@ -144,6 +205,7 @@ def list_capabilities(arguments: dict[str, Any], project_root: Path) -> str:
     lines = [f"project: {project_root}", f"providers: {', '.join(available_providers())}"]
     lines.append(f"tools: {', '.join(available_tools())}")
     lines.append(f"workflows: {', '.join(available_workflows())}")
+    lines.append(f"specialist agents: {', '.join(available_specialists())}")
 
     loader = SkillLoader(project_root=project_root)
     skills = loader.discover()
@@ -166,6 +228,11 @@ def list_capabilities(arguments: dict[str, Any], project_root: Path) -> str:
     lines.append(f"- enabled tools: {', '.join(config.enabled_tool_names()) or '(none)'}")
     lines.append(f"- skills: {', '.join(config.skills) or '(none)'}")
     lines.append(f"- workflow: {config.workflow.name}")
+    lines.append(
+        f"- orchestrator: strategy={config.orchestrator.strategy}, "
+        f"planner={config.orchestrator.planner}, "
+        f"agents={', '.join(config.orchestrator.agents) or '(none)'}"
+    )
 
     try:
         enabled = create_enabled_tools(config.tools, project_root)
@@ -193,9 +260,10 @@ def build_mcp_tools(project_root: Path | None = None) -> list[MCPTool]:
         MCPTool(
             name="agent_kit_run_workflow",
             description=(
-                "Run the configured agent-kit workflow and return the generated Markdown. "
-                "Use this to turn a requirement (inline text or a project file) into a "
-                "structured requirement summary. Optionally persists the result."
+                "Run one agent-kit workflow and return the generated Markdown: "
+                "requirement-analysis, code-review or unit-test-generation "
+                "(workflow=orchestration delegates to agent_kit_orchestrate). "
+                "Optionally persists the result."
             ),
             input_schema={
                 "type": "object",
@@ -220,6 +288,22 @@ def build_mcp_tools(project_root: Path | None = None) -> list[MCPTool]:
                         "type": "string",
                         "description": (
                             "Optional path (relative to the project root) to write the output to."
+                        ),
+                    },
+                    "agents": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": (
+                            "With workflow=orchestration: force these specialist agents "
+                            "(default: let the router choose)."
+                        ),
+                    },
+                    "strategy": {
+                        "type": "string",
+                        "enum": ["auto", "all"],
+                        "description": (
+                            "With workflow=orchestration: 'auto' routes by request signals, "
+                            "'all' runs every enabled agent."
                         ),
                     },
                 },
@@ -256,6 +340,54 @@ def build_mcp_tools(project_root: Path | None = None) -> list[MCPTool]:
             handler=evaluate,
         ),
         MCPTool(
+            name="agent_kit_orchestrate",
+            description=(
+                "Orchestrator: analyse a request, choose the specialist agents that fit it "
+                "(requirement analysis, code review, unit test generation) and run them, "
+                "returning one aggregated report. Prefer this when the request is broad or "
+                "mixes concerns; use agent_kit_run_workflow to force a single agent."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "input_text": {
+                        "type": "string",
+                        "description": "The request to analyse (diff, requirement, code, ...).",
+                    },
+                    "input_file": {
+                        "type": "string",
+                        "description": "Path to a request file, relative to the project root.",
+                    },
+                    "agents": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Force specific agents instead of routing automatically.",
+                    },
+                    "strategy": {
+                        "type": "string",
+                        "enum": ["auto", "all"],
+                        "description": "How to select agents (default: the project configuration).",
+                    },
+                    "write_output": {
+                        "type": "string",
+                        "description": "Optional path to persist the aggregated report.",
+                    },
+                },
+                "anyOf": [{"required": ["input_text"]}, {"required": ["input_file"]}],
+                "additionalProperties": False,
+            },
+            handler=orchestrate,
+        ),
+        MCPTool(
+            name="agent_kit_list_agents",
+            description=(
+                "List the specialist agents, when to use each, their output contracts and the "
+                "orchestrator configuration. Call this before choosing an agent."
+            ),
+            input_schema={"type": "object", "properties": {}, "additionalProperties": False},
+            handler=list_agents,
+        ),
+        MCPTool(
             name="agent_kit_capabilities",
             description=(
                 "Describe this project's agent-kit setup: providers, tools, skills, "
@@ -288,7 +420,9 @@ __all__ = [
     "MCPToolError",
     "build_mcp_tools",
     "evaluate",
+    "list_agents",
     "list_capabilities",
+    "orchestrate",
     "read_skill",
     "run_workflow",
     "workflow_output_schema",

@@ -17,26 +17,34 @@ agent-kit kiro uninstall              # remove only the managed files
 
 ```text
 .kiro/
-├── steering/
-│   ├── agent-kit.md                   # inclusion: always
-│   └── agent-kit-requirements.md      # inclusion: fileMatch
-├── hooks/
-│   ├── agent-kit-context.json         # UserPromptSubmit
-│   ├── agent-kit-evaluate.json        # PostFileSave
-│   └── agent-kit-run.json             # Manual
-├── agents/
-│   └── agent-kit.json                 # custom agent bound to the MCP tools
-├── prompts/
+├── steering/                            # 4 files: 1 always + 3 fileMatch contracts
+│   ├── agent-kit.md                     # inclusion: always (agents + tools + rules)
+│   ├── agent-kit-requirements.md        # fileMatch: requirement summary contract
+│   ├── agent-kit-code-review.md         # fileMatch: code review contract
+│   └── agent-kit-unit-test.md           # fileMatch: unit test plan contract
+├── hooks/                               # 4 v1 hooks
+│   ├── agent-kit-context.json           # UserPromptSubmit → inject capabilities
+│   ├── agent-kit-evaluate.json          # PostFileSave → validate the output
+│   ├── agent-kit-run.json               # Manual → run the configured workflow
+│   └── agent-kit-orchestrate.json       # Manual → run the orchestrator
+├── agents/                              # 3 custom agents
+│   ├── agent-kit.json                   # orchestrator (all agent-kit tools)
+│   ├── code-review.json                 # code review agent
+│   └── unit-test.json                   # unit test agent
+├── prompts/                             # 5 file-based slash commands
+│   ├── agent-kit.orchestrate.md
+│   ├── agent-kit.code-review.md
+│   ├── agent-kit.unit-test.md
 │   ├── agent-kit.run.md
 │   └── agent-kit.evaluate.md
 ├── settings/
-│   └── mcp.json                       # registers `agent-kit mcp serve`
+│   └── mcp.json                         # registers `agent-kit mcp serve`
 └── specs/
     └── agent-kit-poc/
-        ├── requirements.md            # EARS notation
+        ├── requirements.md              # EARS notation
         ├── design.md
         ├── tasks.md
-        └── .config.kiro               # specId / workflowType / specType
+        └── .config.kiro                 # specId / workflowType / specType
 ```
 
 `install` never overwrites an existing file unless `--force` is passed, so you can
@@ -75,16 +83,19 @@ diagnostics go to stderr.
 
 | Tool | Arguments | What it does |
 | --- | --- | --- |
-| `agent_kit_run_workflow` | `input_text` or `input_file`, optional `workflow`, `skill`, `write_output` | runs the configured workflow and returns the summary plus a `valid:`/`tool_calls:` header |
+| `agent_kit_list_agents` | — | the specialist agents, when to use each, their output contracts |
+| `agent_kit_orchestrate` | `input_text`/`input_file`, optional `agents`, `strategy`, `write_output` | analyses the request, selects agents, runs them, returns one aggregated report |
+| `agent_kit_run_workflow` | `input_text` or `input_file`, optional `workflow`, `skill`, `agents`, `strategy`, `write_output` | runs one agent (`requirement-analysis`, `code-review`, `unit-test-generation`) |
 | `agent_kit_evaluate` | `output_file` or `text`, optional `required_concepts` | deterministic section/concept check, returns the PASS/FAIL report |
-| `agent_kit_capabilities` | — | resolved configuration: model, enabled tools, skills, workflow |
+| `agent_kit_capabilities` | — | resolved configuration: model, tools, skills, workflow, orchestrator |
 | `agent_kit_read_skill` | `name` | the full Markdown instructions of a skill |
 
 All paths are resolved against the project root and refused if they escape it.
 
-**Why `agent_kit_run_workflow` is not auto-approved:** it can call a model (cost)
-and write files. The three read-only tools are auto-approved to keep the session
-fluid. Add `"agent_kit_run_workflow"` to `autoApprove` if you accept that.
+**Why `agent_kit_run_workflow` and `agent_kit_orchestrate` are not auto-approved:**
+they can call a model (cost) and write files. The four read-only tools
+(`list_agents`, `capabilities`, `evaluate`, `read_skill`) are auto-approved to keep
+the session fluid; add the mutating ones to `autoApprove` if you accept that.
 
 Try it without an IDE:
 
@@ -138,9 +149,10 @@ concern in `.kiro/hooks/`, containing a `hooks` array with `trigger`, optional
 
 | File | Trigger | Action | Why |
 | --- | --- | --- | --- |
-| `agent-kit-context.json` | `UserPromptSubmit` | `agent-kit mcp call agent_kit_capabilities` | STDOUT of an exit-0 hook is added to context, so Kiro always knows the active model, tools, skills and workflow |
-| `agent-kit-evaluate.json` | `PostFileSave` (matcher `output/.*\.md$`) | `agent-kit evaluate output/sample-001.md` | a saved summary is validated immediately |
+| `agent-kit-context.json` | `UserPromptSubmit` | `agent-kit mcp call agent_kit_capabilities` | STDOUT of an exit-0 hook is added to context, so Kiro always knows the active model, tools, agents and workflow |
+| `agent-kit-evaluate.json` | `PostFileSave` (matcher `output/.*\.md$`) | `agent-kit evaluate output/sample-001.md --workflow requirement-analysis` | a saved summary is validated immediately |
 | `agent-kit-run.json` | `Manual` | `agent-kit run --input … --output …` | one-click run from the hooks panel |
+| `agent-kit-orchestrate.json` | `Manual` | `agent-kit run --workflow orchestration --output output/sample-orchestration.md` | one-click orchestration (router picks the agents) |
 
 Exit codes: `0` success (STDOUT may join the context), `2` blocks the action, any
 other value is a warning and the session continues.
@@ -152,7 +164,11 @@ other value is a warning and the session continues.
 
 ## 5. Custom agent
 
-`.kiro/agents/agent-kit.json` defines a Kiro agent focused on requirement work:
+Three Kiro agents are generated: `agent-kit` (orchestrator), `code-review` and
+`unit-test`. They all reach the same MCP server; only the read-only tools are
+auto-approved, and each specialist agent ships its own resources and prompt.
+
+`.kiro/agents/agent-kit.json` (the orchestrator):
 
 ```json
 {

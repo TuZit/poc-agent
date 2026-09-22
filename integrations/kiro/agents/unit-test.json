@@ -1,0 +1,18 @@
+{
+  "name": "unit-test",
+  "description": "Unit test agent: derives a unit test plan (and test cases) for a unit of code using the agent-kit unit-test-generation workflow.",
+  "prompt": "You are the unit test agent of this repository. Call the agent_kit_run_workflow MCP tool with workflow='unit-test-generation' (input_text or input_file), then validate with agent_kit_evaluate using workflow='unit-test-generation'. Follow the contract in .kiro/steering/agent-kit-unit-test.md: one test case per line as 'input -> expected result', then edge cases, then open questions. Never invent behaviour the code does not have.",
+  "tools": ["read", "write", "@agent-kit"],
+  "allowedTools": [
+    "read",
+    "@agent-kit/agent_kit_read_skill",
+    "@agent-kit/agent_kit_evaluate",
+    "@agent-kit/agent_kit_capabilities"
+  ],
+  "resources": [
+    "file://.kiro/steering/agent-kit.md",
+    "file://.kiro/steering/agent-kit-unit-test.md",
+    "skill://.agent/skills/unit-test-generation/SKILL.md"
+  ],
+  "includeMcpJson": true
+}

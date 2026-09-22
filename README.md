@@ -45,37 +45,43 @@ Install → Init → Configure → Load skill → Run agent → Use tools → Ge
 
 | Capability | Status |
 | --- | --- |
-| `agent-kit` CLI (`init`, `doctor`, `config`, `run`, `evaluate`, `integration`, `kiro`, `mcp`) | ✅ |
+| `agent-kit` CLI (`init`, `doctor`, `config`, `agents`, `run`, `evaluate`, `integration`, `kiro`, `mcp`) | ✅ |
 | Standalone binary + one-line installer (no Python for end users) | ✅ |
+| **Multi-agent orchestration** — a router selects specialist agents and aggregates their reports | ✅ |
+| Specialist agents: requirement analysis, **code review**, **unit test generation** | ✅ |
 | Project scaffolding from a bundled template | ✅ |
 | `.agent/config.yaml` configuration, secrets from the environment | ✅ |
 | `Model` abstraction: `OpenAIModel` + deterministic `MockModel` | ✅ |
 | `Tool` abstraction: restricted `filesystem` + whitelisted `shell` | ✅ |
 | Markdown skills (`SKILL.md`) with project-local overrides | ✅ |
-| `requirement-analysis` workflow | ✅ |
+| 4 workflows: `requirement-analysis`, `code-review`, `unit-test-generation`, `orchestration` | ✅ |
 | Sample input + expected output | ✅ |
 | Deterministic evaluator (no LLM judge) | ✅ |
-| Unit + integration tests, offline (188 tests) | ✅ |
+| Unit + integration tests, offline (252 tests) | ✅ |
 | Docker image | ✅ |
 | Kiro integration (steering, hooks, prompts, custom agent, MCP server, specs) | ✅ |
 
 ## Architecture
 
 ```text
-CLI (Typer)  ─┬─ init / doctor / config
+CLI (Typer)  ─┬─ init / doctor / config / agents
               ├─ run / evaluate
               ├─ kiro  (generate .kiro/*)
-              └─ mcp   (stdio JSON-RPC server)
+              └─ mcp   (stdio JSON-RPC server, 6 tools)
                     │
                     ▼
             Agent Runtime ──── Model ──── OpenAIModel | MockModel
                     │       ├── Tools ─── filesystem | shell
                     │       ├── Skills ── SKILL.md loader
-                    │       └── Workflow ─ requirement-analysis
+                    │       └── Workflow
+                    │             ├── orchestration ──► TaskRouter (which agent?)
+                    │             ├── requirement-analysis
+                    │             ├── code-review
+                    │             └── unit-test-generation
                     ▼
-                 Output (Markdown)
+                 Output (Markdown)  ── orchestrated report when several agents run
                     ▼
-              Evaluation (deterministic checks)
+              Evaluation (deterministic checks, per-agent section sets)
 ```
 
 The runtime is the product; the CLI is one front end. Dependencies run one way:
@@ -324,6 +330,35 @@ agent-kit mcp call agent_kit_capabilities
 agent-kit mcp call agent_kit_run_workflow --arguments '{"input_text": "Build a todo API"}'
 ```
 
+## Agents & orchestration
+
+Three specialist agents ship with the kit, plus one orchestrator that routes a
+request to them:
+
+| Agent | Use it when | Output contract |
+| --- | --- | --- |
+| `requirement-analysis` | a requirement or user story needs a structured summary | Objective, Actors, Functional Requirements, NFRs, Assumptions, Open Questions |
+| `code-review` | a diff, patch or file must be reviewed | Summary, Findings, Recommendations, Open Questions |
+| `unit-test-generation` | tests must be planned for a unit of code | Summary, Test Scope, Test Cases, Edge Cases, Open Questions |
+| `orchestration` | the request is broad or mixes concerns | Request Analysis, Summary + one section per selected agent |
+
+```bash
+agent-kit agents                                            # list agents + orchestrator setup
+agent-kit run --workflow code-review                        # one agent
+agent-kit run --workflow orchestration                      # router picks the agents
+agent-kit run --workflow orchestration --agents code-review # force an agent
+agent-kit evaluate output/sample-code-review.md --workflow code-review
+```
+
+Routing is deterministic (keywords + diff/test structural signals) and the
+aggregated report states *why* each agent ran. In Kiro the same thing is available
+as slash commands (`agent-kit.orchestrate`, `agent-kit.code-review`, ...), custom
+agents (`kiro-cli --agent code-review`) and MCP tools. Full guide:
+[`docs/multi-agent.md`](docs/multi-agent.md).
+
+> The two new skills are **skeletons** on purpose: each `SKILL.md` ends with a
+> `## TODO (team to complete)` checklist for the team's real review/testing standard.
+
 ## Extending the kit
 
 ### Add a model
@@ -479,6 +514,7 @@ dsh-build/
 
 | Document | Contents |
 | --- | --- |
+| [`docs/multi-agent.md`](docs/multi-agent.md) | **Agents & orchestrator (tiếng Việt)** — 3 agent, routing, CLI/MCP/Kiro, cách thêm agent |
 | [`docs/end-user-install.md`](docs/end-user-install.md) | **Cài đặt cho người dùng cuối (tiếng Việt)** — binary không cần Python, Docker, xử lý sự cố |
 | [`docs/uat-tutorial.md`](docs/uat-tutorial.md) | **UAT guide (tiếng Việt)** — cài đặt, sử dụng, 35 test case nghiệm thu, xử lý sự cố |
 | [`docs/agent-integrations.md`](docs/agent-integrations.md) | **Tích hợp agent tool (tiếng Việt)** — kiến trúc registry, cách thêm tool mới, tham chiếu format |

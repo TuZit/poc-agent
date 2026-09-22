@@ -49,15 +49,28 @@ def _project(tmp_path: Path, config: str = CONFIG_WITH_SKILL) -> Path:
     return project
 
 
-def test_workflow_registry_contains_requirement_analysis() -> None:
-    assert "requirement-analysis" in WORKFLOW_REGISTRY
-    assert available_workflows() == ["requirement-analysis"]
+def test_workflow_registry_contains_all_agents() -> None:
+    assert set(WORKFLOW_REGISTRY) == {
+        "requirement-analysis",
+        "code-review",
+        "unit-test-generation",
+        "orchestration",
+    }
+    assert available_workflows() == [
+        "code-review",
+        "orchestration",
+        "requirement-analysis",
+        "unit-test-generation",
+    ]
     assert create_workflow("requirement-analysis").name == "requirement-analysis"
+    assert create_workflow("code-review").name == "code-review"
+    assert create_workflow("unit-test-generation").name == "unit-test-generation"
+    assert create_workflow("orchestration").is_orchestrator is True
 
 
 def test_unknown_workflow_raises() -> None:
     with pytest.raises(WorkflowError, match="Unknown workflow"):
-        create_workflow("code-review")
+        create_workflow("does-not-exist")
 
 
 def test_requirement_analysis_workflow_produces_valid_output(tmp_path: Path) -> None:

@@ -73,13 +73,15 @@ def test_resources_and_prompts_are_empty_but_valid(mock_project: Path) -> None:
 
 
 # --- tools/list -----------------------------------------------------------
-def test_tools_list_exposes_the_four_agent_kit_tools(mock_project: Path) -> None:
+def test_tools_list_exposes_every_agent_kit_tool(mock_project: Path) -> None:
     response = _request(MCPServer(mock_project), "tools/list")
 
     tools = response["result"]["tools"]
     names = {tool["name"] for tool in tools}
     assert names == {
         "agent_kit_run_workflow",
+        "agent_kit_orchestrate",
+        "agent_kit_list_agents",
         "agent_kit_evaluate",
         "agent_kit_capabilities",
         "agent_kit_read_skill",
@@ -91,7 +93,7 @@ def test_tools_list_exposes_the_four_agent_kit_tools(mock_project: Path) -> None
 
 def test_build_mcp_tools_is_side_effect_free() -> None:
     tools = build_mcp_tools()
-    assert len(tools) == 4
+    assert len(tools) == 6
     assert all(callable(tool.handler) for tool in tools)
 
 
@@ -227,7 +229,7 @@ def test_serve_reads_and_writes_newline_delimited_json(mock_project: Path) -> No
     assert exit_code == 0
     assert len(messages) == 2
     assert messages[0]["result"]["serverInfo"]["name"] == "agent-kit"
-    assert len(messages[1]["result"]["tools"]) == 4
+    assert len(messages[1]["result"]["tools"]) == 6
 
 
 def test_serve_rejects_invalid_json_without_crashing(mock_project: Path) -> None:
@@ -284,3 +286,75 @@ def test_cli_mcp_call_rejects_bad_json(runner, mock_project: Path) -> None:
 
     assert result.exit_code == 1
     assert "valid JSON" in _out(result)
+
+
+# --- orchestrator tools ---------------------------------------------------
+def test_list_agents_describes_every_specialist(mock_project: Path) -> None:
+    response = _call(MCPServer(mock_project), "agent_kit_list_agents", {})
+
+    result = response["result"]
+    text = result["content"][0]["text"]
+    assert result["isError"] is False
+    for name in ("requirement-analysis", "code-review", "unit-test-generation"):
+        assert name in text
+    assert "when to use:" in text
+    assert "orchestrator: strategy=auto planner=rules" in text
+    assert "agent_kit_orchestrate" in text
+
+
+def test_orchestrate_returns_the_aggregated_report(mock_project: Path) -> None:
+    server = MCPServer(mock_project)
+
+    response = _call(
+        server,
+        "agent_kit_orchestrate",
+        {
+            "input_text": "Review this diff, then write the unit tests we are missing.",
+            "write_output": "output/orchestrated.md",
+        },
+    )
+
+    result = response["result"]
+    text = result["content"][0]["text"]
+    assert result["isError"] is False
+    assert "workflow: orchestration" in text
+    assert "selected_agents: code-review, unit-test-generation" in text
+    assert "valid: True" in text
+    assert "## Agent: Code Review" in text
+    assert (mock_project / "output" / "orchestrated.md").is_file()
+
+
+def test_orchestrate_accepts_explicit_agents(mock_project: Path) -> None:
+    response = _call(
+        MCPServer(mock_project),
+        "agent_kit_orchestrate",
+        {"input_text": "anything at all", "agents": ["code-review"]},
+    )
+
+    text = response["result"]["content"][0]["text"]
+    assert "selected_agents: code-review" in text
+    assert "strategy: explicit" in text
+
+
+def test_run_workflow_can_force_the_orchestrator(mock_project: Path) -> None:
+    response = _call(
+        MCPServer(mock_project),
+        "agent_kit_run_workflow",
+        {"input_text": "anything at all", "workflow": "orchestration", "strategy": "all"},
+    )
+
+    text = response["result"]["content"][0]["text"]
+    assert result_is_ok(response)
+    assert "strategy: all" in text
+
+
+def result_is_ok(response: dict) -> bool:
+    return response["result"]["isError"] is False
+
+
+def test_capabilities_report_the_orchestrator(mock_project: Path) -> None:
+    response = _call(MCPServer(mock_project), "agent_kit_capabilities", {})
+
+    text = response["result"]["content"][0]["text"]
+    assert "specialist agents: code-review, requirement-analysis, unit-test-generation" in text
+    assert "- orchestrator: strategy=auto, planner=rules" in text

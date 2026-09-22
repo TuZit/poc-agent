@@ -2,8 +2,14 @@
 
 <!--
 Sync Impact Report
-Version: 1.0.0 | Ratified: 2025-09-21 | Last amended: 2025-09-21
-Source: POC_TASK.md §18 (Development Principles)
+Version: 1.1.0 | Ratified: 2025-09-21 | Last amended: 2025-09-22
+
+Amendment 1.1.0 — the product scope was extended by an explicit stakeholder
+request: from "one agent, one workflow" to "three specialist agents plus one
+orchestrator that selects and coordinates them". Principle I and the
+out-of-scope list were updated, and Principle IX (Coordination Before Autonomy)
+was added. Multi-agent orchestration is therefore *in* scope, but bounded: one
+deterministic orchestrator over at most a handful of single-purpose agents.
 -->
 
 ## Core Principles
@@ -11,12 +17,18 @@ Source: POC_TASK.md §18 (Development Principles)
 ### I. Small by Default (POC-first)
 
 The deliverable is a proof of concept, not a platform. Production concerns —
-multi-agent orchestration, Kubernetes, RBAC, billing, vector stores, complex
+distributed agent meshes, Kubernetes, RBAC, billing, vector stores, complex
 observability — MUST NOT be implemented. Every new file MUST justify itself
 against the acceptance criteria in `specs/001-agent-kit-poc/spec.md`.
 
-**Rationale:** the POC exists to validate packaging, configuration and
-extensibility, not to run production traffic.
+**Bounded multi-agent (amendment 1.1.0):** several specialist agents plus one
+orchestrator ARE in scope, because that is the shape the product needs. The bound
+is explicit: each agent owns exactly one skill and one output contract, the
+orchestrator only selects and aggregates, and neither gains a planner, a queue, a
+memory store or its own runtime.
+
+**Rationale:** the POC exists to validate packaging, configuration, extensibility
+and — since amendment 1.1.0 — coordination, not to run production traffic.
 
 ### II. Interfaces Before Implementations
 
@@ -68,6 +80,20 @@ exit codes. The runtime MUST NOT import anything from `agent_kit.cli`.
 **Rationale:** the runtime is the product; the CLI is one front end among many
 (Kiro, other IDEs, scripts, future services).
 
+### IX. Coordination Before Autonomy
+
+Orchestration MUST be deterministic by default: routing decisions are derived
+from request signals (keywords, diff/test markers) and the reasons are printed in
+the aggregated report. An LLM planner MAY be added later behind
+`orchestrator.planner`, but it MUST NOT be required for the product to work, and
+it MUST NOT replace a working deterministic path.
+
+Each specialist agent MUST be runnable on its own (`--workflow <agent>`), and the
+orchestrator MUST reuse that path rather than reimplementing it.
+
+**Rationale:** coordination that cannot be reproduced or explained cannot be
+tested, costed or debugged — and a POC exists to be tested.
+
 ### VIII. Extensible Without Implementing
 
 The architecture MUST leave obvious extension points — additional models, tools,
@@ -85,6 +111,8 @@ shipping the roadmap.
 - **Packaging:** assets (skills, templates, samples, integrations) MUST ship
   inside the wheel so an installed CLI works outside the source checkout.
 - **Evaluation:** deterministic checks only. No LLM-as-a-judge in the POC.
+- **Agents:** every agent declares its output contract (`required_sections`) and
+  its sample input; a report is complete only when every section is present.
 
 ## Development Workflow
 
@@ -98,4 +126,4 @@ Amendments require a version bump of this document, an update to the affected
 spec or plan, and a green test suite. Principle conflicts are resolved in favour
 of Principles I and V.
 
-**Version:** 1.0.0 | **Ratified:** 2025-09-21 | **Last amended:** 2025-09-21
+**Version:** 1.1.0 | **Ratified:** 2025-09-21 | **Last amended:** 2025-09-22

@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "agent-kit: run the orchestrator",
+      "description": "Analyses the sample request, selects the specialist agents and writes the aggregated report. Trigger it by hand from the Kiro hooks panel.",
+      "trigger": "Manual",
+      "action": {
+        "type": "command",
+        "command": "{{AGENT_KIT_COMMAND}} run --workflow orchestration --output output/sample-orchestration.md"
+      },
+      "timeout": 900,
+      "enabled": true
+    }
+  ]
+}

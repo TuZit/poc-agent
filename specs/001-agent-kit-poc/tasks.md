@@ -139,6 +139,25 @@ siblings. Each task lists the files it touches.
 **Checkpoint F:** `uv tool install .` then the demo checklist in
 [`../../docs/development.md`](../../docs/development.md) passes.
 
+## Phase 15 — Specialist agents & orchestrator (amendment 1.1.0)
+
+- [x] **T080** Add workflow metadata (`title`, `description`, `required_sections`, `routing_keywords`, `default_input`) and split the layer into `workflow.py` / `specialists.py` / `orchestration.py` / `registry.py` — `src/agent_kit/workflow/`
+- [x] **T081** [P] Implement the `code-review` agent: skeleton skill, workflow, sample input + expected — `skills/code-review/`, `samples/code-review/`
+- [x] **T082** [P] Implement the `unit-test-generation` agent: skeleton skill, workflow, sample input + expected — `skills/unit-test-generation/`, `samples/unit-test-generation/`
+- [x] **T083** Implement the deterministic `TaskRouter` (keyword + structural signals, short-keyword word boundaries, allow-list, fallback) — `src/agent_kit/routing.py`
+- [x] **T084** Implement `OrchestrationWorkflow`: strategy `auto`/`all`, explicit agents, aggregated report, sub-agent validation, selection metadata — `src/agent_kit/workflow/orchestration.py`
+- [x] **T085** Extend configuration with the `orchestrator` section and validate it (strategy, planner, agents) — `src/agent_kit/config/loader.py`, `src/agent_kit/cli/doctor.py`
+- [x] **T086** Runtime: allow-list resolution, `run_specialist`, workflow-default skill precedence, per-run options — `src/agent_kit/agent/runtime.py`
+- [x] **T087** CLI: `agent-kit agents`, `run --workflow/--agents/--strategy`, `evaluate --workflow` — `src/agent_kit/cli/agents.py`, `run.py`, `evaluate.py`
+- [x] **T088** MCP: `agent_kit_orchestrate` + `agent_kit_list_agents`, orchestrator metadata in capabilities and run results — `src/agent_kit/mcp/tools.py`
+- [x] **T089** Kiro agent surface: 2 agent steering contracts, 3 slash-command prompts, 3 custom agents, orchestrator hook, read-only `autoApprove` — `integrations/kiro/`
+- [x] **T090** Tests: router, specialist workflows, orchestrator, CLI, MCP tools, Kiro artifacts — `tests/unit/test_router.py`, `test_orchestration.py`, and the extended suites
+- [x] **T091** [P] Document the agents and orchestration (Vietnamese) and refresh README/spec/plan/constitution/UAT — `docs/multi-agent.md`
+- [x] **T092** Checkpoint — the mixed sample selects `code-review` + `unit-test-generation` and every sub-report validates
+
+**Checkpoint G:** `agent-kit run --workflow orchestration` reports its selection and
+`uv run pytest` is green.
+
 ## Dependencies between phases
 
 ```text
@@ -152,16 +171,26 @@ Phase 1 ─► Phase 2 ─► Phase 3 ─► Phase 4 ─► Phase 5
                                         │
                                         ▼
                                   Phase 13 (packaging/docs/Docker)
+                                        │
+                                        ▼
+                     Phase 14 (binary + integration registry)
+                                        │
+                                        ▼
+                     Phase 15 (specialist agents + orchestrator)
 ```
 
 ## Verification summary
 
 | Command | Result |
 | --- | --- |
-| `uv run pytest` | 188 passed, offline, no API key |
+| `uv run pytest` | 252 passed, offline, no API key |
 | `agent-kit doctor` (mock provider) | `Agent environment is ready.` |
 | `agent-kit run` + `agent-kit evaluate output/sample-001.md` | `Result: PASS` |
 | `agent-kit kiro status` | `Kiro integration is complete.` |
 | Binary with `env -i` (no Python) | `--version`, `init --ai kiro`, `run`, `evaluate` PASS, MCP handshake OK |
 | `agent-kit integration list` | only `kiro` registered (this phase) |
+| `agent-kit agents` | 3 specialists + orchestrator config (`strategy=auto`, `planner=rules`) |
+| `agent-kit run --workflow orchestration` | selects `code-review, unit-test-generation` for the mixed sample |
+| `agent-kit evaluate output/sample-orchestration.md --workflow orchestration` | `Result: PASS` |
+| `agent-kit kiro status` | 21 managed files, 6 MCP tools exposed |
 | MCP `initialize` / `tools/list` / `tools/call` over stdio | 4 tools listed, calls return runtime results |

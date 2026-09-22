@@ -32,19 +32,20 @@ dsh-build/
 ├── .specify/memory/constitution.md        # governing principles
 ├── specs/001-agent-kit-poc/               # spec.md, plan.md, tasks.md
 ├── src/agent_kit/
-│   ├── cli/         main, init, config, doctor, run, evaluate, kiro, mcp, common
+│   ├── cli/         main, init, config, doctor, agents, run, evaluate, kiro, integration, mcp, common
 │   ├── agent/       agent (loop), runtime (assembly), state (transcript)
 │   ├── model/       base (interfaces), mock, openai
 │   ├── tools/       base (interfaces), filesystem, shell
 │   ├── skills/      base (Skill), loader (SKILL.md discovery)
-│   ├── workflow/    workflow (abstraction + requirement-analysis)
+│   ├── workflow/    workflow (base), specialists, orchestration, registry
+│   ├── routing.py   deterministic task router
 │   ├── evaluation/  evaluator (deterministic checks)
-│   ├── integrations/kiro.py
+│   ├── integrations/base.py, kiro.py
 │   ├── mcp/         server.py (JSON-RPC over stdio), tools.py
 │   ├── config/      loader.py
 │   ├── paths.py     bundled-asset resolution
 │   └── scaffold.py  template rendering/copying
-├── skills/requirement-analysis/{SKILL.md,templates/}
+├── skills/{requirement-analysis,code-review,unit-test-generation}/SKILL.md
 ├── templates/project/{.agent/config.yaml,README.md}
 ├── integrations/kiro/                     # steering, hooks, specs, mcp.json templates
 ├── samples/requirement-analysis/{input,expected}/sample-001.md
@@ -107,8 +108,41 @@ every `ToolInvocation`.
 
 `Workflow.execute(context, runtime) -> WorkflowResult`. `AgentRuntime` builds the
 model, tools and skill loader from configuration, then delegates to the workflow.
-`RequirementAnalysisWorkflow` loads the skill, runs the agent and validates the
-output sections. New workflows register in `WORKFLOW_REGISTRY`.
+
+The workflow layer is split by responsibility:
+
+* `workflow/workflow.py` — base classes; every workflow declares metadata
+  (`title`, `description`, `default_skill`, `required_sections`,
+  `routing_keywords`, `default_input`);
+* `workflow/specialists.py` — the three specialist agents, each a `SkillWorkflow`
+  subclass that only declares that metadata;
+* `workflow/orchestration.py` — the orchestrator: select, run, aggregate;
+* `workflow/registry.py` — `WORKFLOW_REGISTRY` plus specialist/router helpers.
+
+Skill resolution order is `explicit --skill` → the workflow's `default_skill` →
+the first skill in `.agent/config.yaml`; the workflow's own default wins so running
+`code-review` never loads the requirement-analysis skill.
+
+### Routing (`routing.py`)
+
+`TaskRouter` scores a request against the candidate agents: keyword matches
+(short keywords must match whole words) plus structural signals (unified-diff
+markers for code review, existing assertions for unit tests). Selected agents are
+ordered by signal strength, ties by configuration order, with
+`orchestrator.default_agents` as the fallback. The module is deliberately
+top-level and imports no other agent-kit module at runtime, which keeps the import
+graph acyclic (`workflow.registry -> routing -> stdlib`).
+
+### Orchestration (`workflow/orchestration.py`)
+
+`OrchestrationWorkflow` reads `orchestrator.strategy` (`auto` | `all`) and the
+allow-list, selects agents (or takes `--agents`/MCP overrides), runs each through
+`runtime.run_specialist(...)`, and renders one `# Agent Orchestration Report`
+(`Request Analysis`, one `## Agent: <title>` per run, `## Summary`). The result is
+valid only when the report has its sections **and** every sub-result is valid;
+sub-issues are prefixed with the agent name. Selection metadata
+(`strategy`, `selected_agents`, `signals`, `agent_results`) is recorded on
+`WorkflowResult.metadata` for the CLI, MCP and tests.
 
 ### Evaluation (`evaluation/`)
 
@@ -164,6 +198,10 @@ exits non-zero on failure; `config` reads/updates YAML by dotted key.
 9. **Integration test** — full flow.
 10. **Docker** — image running the installed CLI.
 11. **Kiro integration** — steering, hooks, spec artifacts, MCP server.
+12. **Specialist agents** — code review + unit test generation.
+13. **Orchestrator** — deterministic router, agent selection, aggregated report.
+14. **Kiro multi-agent surface** — slash commands, custom agents, agent steering.
+15. **End-user packaging** — standalone binary + one-line installer.
 
 Each phase ends with a green `pytest` and an updated document.
 

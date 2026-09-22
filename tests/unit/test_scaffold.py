@@ -68,7 +68,10 @@ def test_init_project_creates_expected_files(tmp_path: Path) -> None:
     assert (target / "README.md").is_file()
     assert (target / "samples" / "requirement-analysis" / "input" / "sample-001.md").is_file()
     assert (target / "samples" / "requirement-analysis" / "expected" / "sample-001.md").is_file()
-    assert len(written) == 4
+    assert (target / "samples" / "code-review" / "input" / "sample-code-review.md").is_file()
+    assert (target / "samples" / "unit-test-generation" / "input" / "sample-unit-test.md").is_file()
+    assert (target / "samples" / "orchestration" / "input" / "sample-orchestration.md").is_file()
+    assert len(written) == 10
 
 
 def test_init_project_substitutes_project_name(tmp_path: Path) -> None:

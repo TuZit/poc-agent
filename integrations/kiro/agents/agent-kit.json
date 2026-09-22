@@ -1,10 +1,11 @@
 {
   "name": "agent-kit",
-  "description": "Requirement analysis agent backed by the Agent Kit POC runtime, with agent-kit exposed as MCP tools.",
+  "description": "Orchestrator agent: analyses a request, selects the agent-kit specialist agents (requirement analysis, code review, unit test generation) and runs them.",
   "prompt": "file://.kiro/steering/agent-kit.md",
   "tools": ["read", "write", "@agent-kit"],
   "allowedTools": [
     "read",
+    "@agent-kit/agent_kit_list_agents",
     "@agent-kit/agent_kit_capabilities",
     "@agent-kit/agent_kit_evaluate",
     "@agent-kit/agent_kit_read_skill"
@@ -16,5 +17,5 @@
     "skill://.agent/skills/**/SKILL.md"
   ],
   "includeMcpJson": true,
-  "welcomeMessage": "Agent Kit POC ready. Check the environment with 'agent-kit doctor', then use the agent_kit_run_workflow MCP tool to analyse a requirement."
+  "welcomeMessage": "Agent Kit orchestrator ready. Ask for a review, a test plan or a requirement summary — or call agent_kit_orchestrate and let the router choose."
 }

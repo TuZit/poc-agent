@@ -7,6 +7,7 @@
 #   agent-kit doctor          validate this file and the environment
 #   agent-kit config show     print the resolved configuration
 #   agent-kit config set model.provider mock
+#   agent-kit agents          list the specialist agents
 #   agent-kit run             execute the configured workflow
 #   agent-kit evaluate output/sample-001.md
 
@@ -26,8 +27,27 @@ tools:
   shell:
     enabled: true         # whitelisted commands only: python, pytest, git
 
+# Skills available to the agent; each workflow uses its own skill by default and
+# a project-local skill of the same name overrides the bundled one.
 skills:
   - requirement-analysis
+  - code-review
+  - unit-test-generation
 
 workflow:
+  # requirement-analysis | code-review | unit-test-generation | orchestration
+  # Use "orchestration" to let the orchestrator pick the specialist agents.
   name: requirement-analysis
+
+# The orchestrator ("big agent") that analyses a request and dispatches it to the
+# specialist agents above. Used when workflow.name is "orchestration", or when it
+# is requested explicitly: agent-kit run --workflow orchestration
+orchestrator:
+  strategy: auto          # auto = route by request signals | all = run every agent
+  planner: rules          # deterministic router (an LLM planner is a future extension)
+  agents:                 # allow-list, in execution order
+    - requirement-analysis
+    - code-review
+    - unit-test-generation
+  default_agents:         # used when strategy=auto finds no signal in the request
+    - requirement-analysis

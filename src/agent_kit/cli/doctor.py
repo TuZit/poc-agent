@@ -20,7 +20,7 @@ from agent_kit.model import available_providers, required_env_vars
 from agent_kit.skills import SkillError, SkillLoader
 from agent_kit.tools import create_enabled_tools
 from agent_kit.tools.base import ToolError
-from agent_kit.workflow import available_workflows
+from agent_kit.workflow import available_specialists, available_workflows
 
 MIN_PYTHON = (3, 11)
 
@@ -160,6 +160,18 @@ def doctor_command(
             f"Workflow '{config.workflow.name}'",
             workflow_ok,
             f"unknown workflow; available: {', '.join(available_workflows())}",
+        )
+
+        # 7. Orchestrator ---------------------------------------------------
+        registered = set(available_specialists())
+        enabled = list(config.orchestrator.agents)
+        unknown_agents = [name for name in enabled if name not in registered]
+        report.check(
+            f"Orchestrator agents ({len(enabled)}: {', '.join(enabled) or 'none'})",
+            not unknown_agents,
+            f"unknown agent(s): {', '.join(unknown_agents)}; "
+            f"available: {', '.join(sorted(registered))}",
+            note=f"strategy={config.orchestrator.strategy}, planner={config.orchestrator.planner}",
         )
 
     info(report.render())

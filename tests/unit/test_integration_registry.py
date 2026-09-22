@@ -100,7 +100,7 @@ def test_install_many_returns_written_files_per_integration(project: Path) -> No
     written = install_many([KIRO], project)
 
     assert set(written) == {"kiro"}
-    assert len(written["kiro"]) == 13
+    assert len(written["kiro"]) == 21
     assert (project / ".kiro" / "settings" / "mcp.json").is_file()
 
 
@@ -141,7 +141,7 @@ def test_cli_integration_list_shows_kiro(runner: CliRunner, project: Path) -> No
 def test_cli_integration_install_and_status(runner: CliRunner, project: Path) -> None:
     install = runner.invoke(app, ["integration", "install", "kiro", "--project", str(project)])
     assert install.exit_code == 0, _out(install)
-    assert "Kiro integration — 13 file(s)" in _out(install)
+    assert "Kiro integration — 21 file(s)" in _out(install)
 
     status = runner.invoke(app, ["integration", "status", "--project", str(project)])
     assert status.exit_code == 0, _out(status)

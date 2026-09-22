@@ -1,7 +1,7 @@
 # Feature Specification: Agent Kit POC
 
 **Feature branch:** `001-agent-kit-poc`
-**Status:** Implemented
+**Status:** Implemented (scope amended by constitution 1.1.0: bounded multi-agent)
 **Input:** `POC_TASK.md` — build a small POC for an installable AI Agent Kit
 inspired by the architecture and developer experience of GitHub Spec Kit.
 
@@ -133,6 +133,38 @@ server registration; `agent-kit mcp serve` answers MCP `initialize`,
 3. **Given** an already-installed integration, **when** it is installed again
    without `--force`, **then** existing files are not overwritten.
 
+### User Story 7 — Specialist agents and an orchestrator (P1, added by amendment 1.1.0)
+
+A developer wants one entry point that understands what kind of work a request
+needs and runs the right specialist agent (or several), instead of remembering
+which workflow to invoke.
+
+**Why P1:** this is the product shape requested after the initial POC.
+
+**Independent test:** `agent-kit run --workflow orchestration` over a request that
+mentions both a review and missing tests produces one aggregated report whose
+`Request Analysis` section names the selected agents.
+
+**Acceptance scenarios:**
+
+1. **Given** a code change, **when** the orchestrator runs, **then** it selects
+   `code-review` and the report contains a `## Agent: Code Review` section.
+2. **Given** a request about missing tests, **when** the orchestrator runs,
+   **then** it selects `unit-test-generation`.
+3. **Given** a request that mixes both, **when** the orchestrator runs, **then**
+   both agents run, in signal-strength order, and both results appear in one report.
+4. **Given** a request with no recognisable signal, **when** the orchestrator
+   runs, **then** it falls back to `orchestrator.default_agents`.
+5. **Given** `--agents <name>` or `orchestrator.strategy: all`, **when** the
+   orchestrator runs, **then** the selection is exactly the requested one.
+6. **Given** an unknown agent name or strategy, **when** the orchestrator runs,
+   **then** it fails with the list of valid values.
+7. **Given** a specialist agent, **when** it is invoked directly
+   (`--workflow code-review`), **then** it loads its own skill, produces its own
+   report and validates against its own section set.
+8. **Given** a Kiro workspace, **when** the integration is installed, **then**
+   slash commands, custom agents and MCP tools exist for each agent.
+
 ### Edge cases
 
 - Configuration YAML is malformed, empty, or missing a required key.
@@ -146,6 +178,25 @@ server registration; `agent-kit mcp serve` answers MCP `initialize`,
 
 ### Functional
 
+- **FR-015a:** The kit MUST provide specialist agents for requirement analysis,
+  code review and unit test generation; each MUST own one skill and one required
+  section set, and MUST be runnable standalone.
+- **FR-015b:** An orchestrator MUST analyse a request, select zero or more
+  specialist agents from a configured allow-list and execute them.
+- **FR-015c:** Routing MUST be deterministic and explainable: the aggregated
+  report MUST name the selected agents and the signals that selected them.
+- **FR-015d:** Orchestration MUST support `auto` (route by signals) and `all`
+  (run every allowed agent) strategies, plus an explicit agent override.
+- **FR-015e:** The aggregated report MUST contain `Request Analysis` and `Summary`
+  sections and one section per executed agent, and MUST be invalid when any
+  sub-agent result is invalid (issues prefixed with the agent name).
+- **FR-015f:** Each agent's output contract MUST be usable directly by the
+  evaluator (`agent-kit evaluate <file> --workflow <agent>`).
+- **FR-015g:** Unknown agent names, unknown strategies and an unsupported planner
+  MUST fail with actionable errors listing the valid values.
+- **FR-015h:** Kiro artifacts MUST cover every agent: a slash-command prompt, a
+  custom agent and a steering contract, plus MCP tools for listing agents and
+  running the orchestrator.
 - **FR-001:** The CLI MUST be named `agent-kit` and expose `init`, `doctor`,
   `config`, `run`, `evaluate` (plus `kiro` and `mcp` integration commands).
 - **FR-002:** `init` MUST scaffold from a bundled template and MUST NOT
@@ -180,7 +231,11 @@ server registration; `agent-kit mcp serve` answers MCP `initialize`,
 ### Key entities
 
 - **Configuration (`AppConfig`)** — agent, model, tools, skills, workflow,
-  project root, config path.
+  orchestrator, project root, config path.
+- **Specialist agent** — a `SkillWorkflow` with a name, title, description, skill,
+  required sections, routing keywords and a sample input.
+- **RoutingDecision** — selected agent names, the matched signals, the strategy
+  and a human-readable reason.
 - **Model** — provider, name, `generate(messages, tools) -> ModelResponse`.
 - **Message / ToolCall / ToolSpec / ModelResponse** — provider-neutral
   conversation primitives.
@@ -204,7 +259,10 @@ server registration; `agent-kit mcp serve` answers MCP `initialize`,
 
 ## Out of Scope
 
-Multi-agent orchestration, production authentication, Kubernetes, cloud
-deployment, complex memory, vector databases, enterprise RBAC, UI, billing,
-advanced observability, additional LLM providers, complex MCP ecosystems. The
-architecture must allow them; this POC must not implement them.
+Production authentication, Kubernetes, cloud deployment, complex memory,
+vector databases, enterprise RBAC, UI, billing, advanced observability,
+additional LLM providers, complex MCP ecosystems — and, within multi-agent
+orchestration, anything beyond the bounded shape of FR-015b: no LLM planner
+(`planner: rules` only), no parallel execution, no queue, no inter-agent memory,
+no agent-to-agent messaging. The architecture must allow them; this POC must not
+implement them.

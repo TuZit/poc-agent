@@ -1,9 +1,17 @@
 """Workflow abstraction — separate from the agent runtime.
 
-A workflow owns the *process* (input → skill → analyze → generate → validate);
-the :class:`~agent_kit.agent.agent.Agent` owns the model/tool loop. Additional
-workflows (``code-review``, ``test-generation``, ``documentation-generation``,
-``api-validation``, ``migration``) register in :data:`WORKFLOW_REGISTRY`.
+A workflow owns the *process* (input → skill → analyse → generate → validate);
+the :class:`~agent_kit.agent.agent.Agent` owns the model/tool loop.
+
+Two kinds of workflow exist:
+
+* **specialist workflows** (:mod:`agent_kit.workflow.specialists`) — one skill,
+  one output contract: ``requirement-analysis``, ``code-review``,
+  ``unit-test-generation``;
+* **the orchestrator** (:mod:`agent_kit.workflow.orchestration`) — analyses a
+  request, selects specialists and runs them.
+
+The registry itself lives in :mod:`agent_kit.workflow.registry`.
 """
 
 from __future__ import annotations
@@ -44,81 +52,90 @@ class WorkflowResult:
     valid: bool
     issues: list[str] = field(default_factory=list)
     tool_invocations: list[ToolInvocation] = field(default_factory=list)
+    #: Sections this result was validated against.
+    required_sections: tuple[str, ...] = ()
+    #: Extra information for programmatic callers (the orchestrator records its
+    #: strategy, the selected agents and their signals here).
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def tool_call_count(self) -> int:
         return len(self.tool_invocations)
 
+    def status_line(self) -> str:
+        """One-line status used in aggregated reports."""
+        state = "PASS" if self.valid else "FAIL"
+        return f"{self.workflow}: {state} ({self.tool_call_count} tool call(s))"
+
 
 class Workflow(ABC):
-    """Base class for workflows."""
+    """Base class for workflows.
 
-    #: Name used in ``workflow.name``.
+    Subclasses declare metadata so the CLI, the orchestrator and the MCP tools
+    can describe themselves without hard-coding anything:
+
+    * :attr:`name` — value used in ``workflow.name``
+    * :attr:`title` / :attr:`description` — shown in ``agent-kit agents``
+    * :attr:`default_skill` — skill loaded when the configuration declares none
+    * :attr:`required_sections` — output contract enforced after the run
+    * :attr:`routing_keywords` — signals the router matches against the request
+    * :attr:`default_input` — sample input used when ``--input`` is omitted
+    """
+
     name: str = "workflow"
-    #: Skill loaded when the configuration declares no skill.
-    default_skill: str | None = None
-    #: One-line description for ``agent-kit workflow list`` style output.
+    title: str = ""
     description: str = ""
+    default_skill: str | None = None
+    required_sections: tuple[str, ...] = ()
+    routing_keywords: tuple[str, ...] = ()
+    default_input: str | None = None
+    #: True for workflows that dispatch to other workflows instead of the model.
+    is_orchestrator: bool = False
 
     @abstractmethod
     def execute(self, context: WorkflowContext, runtime: AgentRuntime) -> WorkflowResult:
         """Run the workflow and return its (already validated) result."""
 
+    def validate(self, output: str) -> list[str]:
+        """Issues that make ``output`` invalid for this workflow."""
+        return [
+            f"Missing required section: '{section}'"
+            for section in find_missing_sections(output, self.required_sections)
+        ]
 
-class RequirementAnalysisWorkflow(Workflow):
-    """Input requirement → load skill → analyze → generate → validate → return."""
+    def display_title(self) -> str:
+        return self.title or self.name
 
-    name = "requirement-analysis"
-    default_skill = "requirement-analysis"
-    description = "Turn a raw requirement into a structured requirement summary."
+
+class SkillWorkflow(Workflow):
+    """Workflow shape shared by every specialist agent.
+
+    Load the skill → run the agent → validate the output. Specialists only add
+    metadata (skill, sections, routing signals, sample input).
+    """
 
     def execute(self, context: WorkflowContext, runtime: AgentRuntime) -> WorkflowResult:
         skill = context.skill
         if skill is None and self.default_skill:
             skill = runtime.load_skill(self.default_skill)
 
-        agent = runtime.build_agent()
-        agent_result = agent.run(context.input_text, skill=skill)
+        agent_result = runtime.build_agent().run(context.input_text, skill=skill)
+        issues = self.validate(agent_result.output)
 
-        issues = [
-            f"Missing required section: '{section}'"
-            for section in find_missing_sections(agent_result.output)
-        ]
         return WorkflowResult(
             workflow=self.name,
             output=agent_result.output,
             valid=not issues,
             issues=issues,
             tool_invocations=agent_result.tool_invocations,
+            required_sections=self.required_sections,
         )
-
-
-WORKFLOW_REGISTRY: dict[str, type[Workflow]] = {
-    RequirementAnalysisWorkflow.name: RequirementAnalysisWorkflow,
-}
-
-
-def available_workflows() -> list[str]:
-    return sorted(WORKFLOW_REGISTRY)
-
-
-def create_workflow(name: str) -> Workflow:
-    """Instantiate a workflow by name."""
-    workflow_class = WORKFLOW_REGISTRY.get(name)
-    if workflow_class is None:
-        raise WorkflowError(
-            f"Unknown workflow '{name}'. Available workflows: {', '.join(available_workflows())}."
-        )
-    return workflow_class()
 
 
 __all__ = [
-    "WORKFLOW_REGISTRY",
-    "RequirementAnalysisWorkflow",
+    "SkillWorkflow",
     "Workflow",
     "WorkflowContext",
     "WorkflowError",
     "WorkflowResult",
-    "available_workflows",
-    "create_workflow",
 ]

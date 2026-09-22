@@ -228,7 +228,7 @@ def test_run_fails_when_input_is_missing(runner: CliRunner, mock_project: Path) 
 def test_run_fails_for_unknown_workflow(runner: CliRunner, mock_project: Path) -> None:
     result = runner.invoke(
         app,
-        ["run", "--project", str(mock_project), "--workflow", "code-review"],
+        ["run", "--project", str(mock_project), "--workflow", "does-not-exist"],
     )
 
     assert result.exit_code == 1
@@ -265,3 +265,141 @@ def test_evaluate_honours_required_concepts(runner: CliRunner, mock_project: Pat
     assert passed.exit_code == 0, _out(passed)
     assert failed.exit_code == 1
     assert "Concept: blockchain" in _out(failed)
+
+
+# --- agents ---------------------------------------------------------------
+def test_agents_lists_specialists_and_the_orchestrator(
+    runner: CliRunner, mock_project: Path
+) -> None:
+    result = runner.invoke(app, ["agents", "--project", str(mock_project)])
+
+    output = _out(result)
+    assert result.exit_code == 0, output
+    for name in ("requirement-analysis", "code-review", "unit-test-generation"):
+        assert name in output
+    for section in ("Summary", "Test Scope", "Test Cases"):
+        assert section in output
+    assert "Orchestrator: workflow=orchestration" in output
+    assert "strategy=auto" in output
+
+
+def test_run_code_review_uses_its_own_sample_input(
+    runner: CliRunner, mock_project: Path
+) -> None:
+    result = runner.invoke(
+        app, ["run", "--project", str(mock_project), "--workflow", "code-review"]
+    )
+
+    assert result.exit_code == 0, _out(result)
+    assert (mock_project / "output" / "sample-code-review.md").is_file()
+
+
+def test_run_orchestration_reports_the_selected_agents(
+    runner: CliRunner, mock_project: Path
+) -> None:
+    result = runner.invoke(
+        app, ["run", "--project", str(mock_project), "--workflow", "orchestration"]
+    )
+
+    output = _out(result)
+    assert result.exit_code == 0, output
+    assert "Orchestrator selected: code-review, unit-test-generation" in output
+    report = (mock_project / "output" / "sample-orchestration.md").read_text(encoding="utf-8")
+    assert "## Agent: Code Review" in report
+    assert "## Agent: Unit Test Generation" in report
+
+
+def test_run_orchestration_accepts_explicit_agents(
+    runner: CliRunner, mock_project: Path
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--project",
+            str(mock_project),
+            "--workflow",
+            "orchestration",
+            "--agents",
+            "code-review",
+        ],
+    )
+
+    assert result.exit_code == 0, _out(result)
+    report = (mock_project / "output" / "sample-orchestration.md").read_text(encoding="utf-8")
+    assert "## Agent: Code Review" in report
+    assert "## Agent: Unit Test Generation" not in report
+
+
+def test_run_orchestration_rejects_an_unknown_agent(
+    runner: CliRunner, mock_project: Path
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--project",
+            str(mock_project),
+            "--workflow",
+            "orchestration",
+            "--agents",
+            "does-not-exist",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Unknown agent" in _out(result)
+
+
+def test_run_orchestration_rejects_an_unknown_strategy(
+    runner: CliRunner, mock_project: Path
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "run",
+            "--project",
+            str(mock_project),
+            "--workflow",
+            "orchestration",
+            "--strategy",
+            "llm",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "Unknown orchestrator strategy" in _out(result)
+
+
+def test_evaluate_uses_the_workflow_section_set(runner: CliRunner, mock_project: Path) -> None:
+    runner.invoke(app, ["run", "--project", str(mock_project), "--workflow", "code-review"])
+    output_file = str(mock_project / "output" / "sample-code-review.md")
+
+    matching = runner.invoke(app, ["evaluate", output_file, "--workflow", "code-review"])
+    mismatched = runner.invoke(app, ["evaluate", output_file])
+
+    assert matching.exit_code == 0, _out(matching)
+    assert "Result: PASS" in _out(matching)
+    # Requirement sections are not present in a code review report.
+    assert mismatched.exit_code == 1
+    assert "Objective" in _out(mismatched)
+
+
+def test_doctor_reports_the_orchestrator(runner: CliRunner, mock_project: Path) -> None:
+    result = runner.invoke(app, ["doctor", "--project", str(mock_project)])
+
+    output = _out(result)
+    assert result.exit_code == 0, output
+    assert "Orchestrator agents (3:" in output
+
+
+def test_doctor_flags_an_unknown_agent(runner: CliRunner, mock_project: Path) -> None:
+    runner.invoke(
+        app,
+        ["config", "set", "orchestrator.agents.0", "typo-agent", "--project", str(mock_project)],
+    )
+
+    result = runner.invoke(app, ["doctor", "--project", str(mock_project)])
+
+    assert result.exit_code == 1
+    assert "typo-agent" in _out(result)

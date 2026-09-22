@@ -8,11 +8,14 @@
 **Goals:** prove that an agent can be packaged as an installable CLI, that a
 project can be initialised from a template, that model/tool/skill/workflow
 selection can be externalised into configuration, that skills can ship separately
-from the runtime, that sample input/output can drive regression testing, and that
-the same runtime can serve an IDE (Kiro) as well as a shell.
+from the runtime, that sample input/output can drive regression testing, that one
+orchestrator can select and coordinate several specialist agents, and that the
+same runtime can serve an IDE (Kiro) as well as a shell.
 
-**Non-goals (deliberate):** multi-agent orchestration, memory/vector stores,
-RBAC, billing, Kubernetes, extra providers beyond one real one plus a mock.
+**Non-goals (deliberate):** an LLM planner, parallel or queued agent execution,
+inter-agent memory, memory/vector stores, RBAC, billing, Kubernetes, extra
+providers beyond one real one plus a mock. See constitution 1.1.0 for the bound on
+multi-agent.
 
 ## 2. Layering
 
@@ -34,7 +37,8 @@ RBAC, billing, Kubernetes, extra providers beyond one real one plus a mock.
 │   model/  Model · MockModel · OpenAIModel                   │
 │   tools/  Tool · FilesystemTool · ShellTool                 │
 │   skills/ Skill · SkillLoader                               │
-│   workflow/ Workflow · RequirementAnalysisWorkflow          │
+│   routing.py  TaskRouter (which agent should handle this?)  │
+│   workflow/ Workflow · specialists · orchestration          │
 └──────────────────────────┬──────────────────────────────────┘
                            │ uses
 ┌──────────────────────────▼──────────────────────────────────┐
@@ -77,6 +81,24 @@ input text ──► WorkflowContext ──► Workflow.execute
 Tool failures do not abort the run: they are appended as tool output so the model
 can correct itself. Only model/provider errors, unknown workflows/skills and
 exhausted iterations abort (each with a distinct exception type).
+
+## 3.1 Orchestration flow
+
+```text
+request ──► OrchestrationWorkflow
+                │
+                ├─ read orchestrator.{strategy, agents, default_agents}
+                ├─ TaskRouter.select(text)         ← keywords + structural signals
+                │     └─ RoutingDecision(selected, signals, strategy, reason)
+                ├─ for each selected agent: runtime.run_specialist(name, text)
+                │     └─ its own skill → its own agent run → its own validation
+                └─ build_report(...) → # Agent Orchestration Report
+                      valid = report sections present AND every sub-result valid
+```
+
+Selection is deterministic and printed in the report, which is what makes
+coordination testable offline. An LLM planner is a seam (`orchestrator.planner`),
+not a requirement.
 
 ## 4. Contracts
 
@@ -153,6 +175,7 @@ outside the source tree.
 
 | Want to add… | Touch this | Runtime changes |
 | --- | --- | --- |
+| **Agent (specialist)** | `skills/<name>/SKILL.md` + `workflow/specialists.py` + `WORKFLOW_REGISTRY` + `orchestrator.agents` | none |
 | Model provider | `model/<name>.py` + `MODEL_REGISTRY` | none |
 | Tool | `tools/<name>.py` + `TOOL_REGISTRY` | none |
 | Skill | a `SKILL.md` directory | none |
@@ -165,7 +188,10 @@ plugs into these seams without reshaping the core.
 ## 8. Where the POC stops
 
 - One real provider, one mock provider.
-- One workflow, one skill, two tools, one evaluator strategy.
+- Three specialist agents, one orchestrator, one routing strategy set
+  (`auto`/`all`), one evaluator strategy; the two new skills are skeletons.
+- Orchestration is sequential and single-process: no queue, no parallelism, no
+  inter-agent memory, no LLM planner.
 - The MCP server implements the tool subset of the protocol (no resources,
   prompts, sampling, or notifications beyond `initialized`).
 - `config set` rewrites the YAML file and therefore drops comments.

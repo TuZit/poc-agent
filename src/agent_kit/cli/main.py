@@ -17,6 +17,7 @@ from __future__ import annotations
 import typer
 
 from agent_kit import __version__
+from agent_kit.cli.agents import agents_command
 from agent_kit.cli.config import config_app
 from agent_kit.cli.doctor import doctor_command
 from agent_kit.cli.evaluate import evaluate_command
@@ -57,6 +58,9 @@ app.command("doctor", help="Validate configuration, model, tools, skills and env
 app.command("run", help="Run the configured workflow and write the output file.")(run_command)
 app.command("evaluate", help="Deterministically evaluate a generated output file.")(
     evaluate_command
+)
+app.command("agents", help="List the specialist agents and the orchestrator setup.")(
+    agents_command
 )
 app.add_typer(config_app, name="config")
 

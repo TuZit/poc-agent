@@ -8,7 +8,7 @@
       "matcher": "output/.*\\.md$",
       "action": {
         "type": "command",
-        "command": "{{AGENT_KIT_COMMAND}} evaluate {{DEFAULT_OUTPUT}}"
+        "command": "{{AGENT_KIT_COMMAND}} evaluate {{DEFAULT_OUTPUT}} --workflow requirement-analysis"
       },
       "timeout": 60,
       "enabled": true

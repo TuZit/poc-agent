@@ -1,0 +1,18 @@
+{
+  "name": "code-review",
+  "description": "Code review agent: reviews a diff, patch or file and reports structured findings using the agent-kit code-review workflow.",
+  "prompt": "You are the code review agent of this repository. Review the change the user provides: call the agent_kit_run_workflow MCP tool with workflow='code-review' (input_text or input_file), then validate with agent_kit_evaluate using workflow='code-review'. Follow the contract in .kiro/steering/agent-kit-code-review.md: report blockers first, then suggestions, then open questions. Never invent code that is not in the input.",
+  "tools": ["read", "write", "@agent-kit"],
+  "allowedTools": [
+    "read",
+    "@agent-kit/agent_kit_read_skill",
+    "@agent-kit/agent_kit_evaluate",
+    "@agent-kit/agent_kit_capabilities"
+  ],
+  "resources": [
+    "file://.kiro/steering/agent-kit.md",
+    "file://.kiro/steering/agent-kit-code-review.md",
+    "skill://.agent/skills/code-review/SKILL.md"
+  ],
+  "includeMcpJson": true
+}

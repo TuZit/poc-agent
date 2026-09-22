@@ -25,6 +25,24 @@ CONFIG_FILE_NAME = "config.yaml"
 #: Deployment environments (containers, CI) can pin the model without editing YAML.
 DEFAULT_MODEL_ENV_VAR = "AGENT_KIT_MODEL"
 
+#: Specialist agents available to the orchestrator by default. Kept as literal
+#: names so the configuration layer stays independent from the workflow registry;
+#: AgentRuntime validates them against what is actually registered.
+DEFAULT_SPECIALIST_AGENTS: tuple[str, ...] = (
+    "requirement-analysis",
+    "code-review",
+    "unit-test-generation",
+)
+
+#: Agents used when the router finds no signal in the request.
+DEFAULT_ORCHESTRATOR_FALLBACK: tuple[str, ...] = ("requirement-analysis",)
+
+#: Supported values for ``orchestrator.strategy``.
+SUPPORTED_ORCHESTRATOR_STRATEGIES: tuple[str, ...] = ("auto", "all")
+
+#: Supported values for ``orchestrator.planner`` — an LLM planner is a future seam.
+SUPPORTED_ORCHESTRATOR_PLANNERS: tuple[str, ...] = ("rules",)
+
 
 class ConfigError(Exception):
     """Raised when configuration is missing, malformed or invalid."""
@@ -68,6 +86,20 @@ class WorkflowSection:
 
 
 @dataclass(frozen=True)
+class OrchestratorSection:
+    """How the orchestrator picks and drives specialist agents."""
+
+    #: ``auto`` routes by request signals, ``all`` runs every allowed agent.
+    strategy: str = "auto"
+    #: Allow-list of specialist agents, in execution order.
+    agents: tuple[str, ...] = DEFAULT_SPECIALIST_AGENTS
+    #: Agents used when ``strategy: auto`` finds no signal.
+    default_agents: tuple[str, ...] = DEFAULT_ORCHESTRATOR_FALLBACK
+    #: ``rules`` (deterministic router) — the only planner implemented today.
+    planner: str = "rules"
+
+
+@dataclass(frozen=True)
 class AppConfig:
     """Fully resolved project configuration."""
 
@@ -78,6 +110,7 @@ class AppConfig:
     workflow: WorkflowSection
     project_root: Path
     config_path: Path
+    orchestrator: OrchestratorSection = field(default_factory=OrchestratorSection)
 
     def enabled_tool_names(self) -> list[str]:
         """Names of tools that are switched on, in configuration order."""
@@ -98,6 +131,12 @@ class AppConfig:
             },
             "skills": list(self.skills),
             "workflow": {"name": self.workflow.name, **self.workflow.options},
+            "orchestrator": {
+                "strategy": self.orchestrator.strategy,
+                "planner": self.orchestrator.planner,
+                "agents": list(self.orchestrator.agents),
+                "default_agents": list(self.orchestrator.default_agents),
+            },
         }
 
 
@@ -107,6 +146,24 @@ def _as_mapping(value: Any, context: str) -> dict[str, Any]:
     if not isinstance(value, dict):
         raise ConfigError(f"{context} must be a YAML mapping.")
     return value
+
+
+def _string_list(
+    value: Any,
+    *,
+    default: tuple[str, ...],
+    context: str,
+) -> tuple[str, ...]:
+    """Parse a list-of-strings config value.
+
+    ``None`` means "not configured" and yields ``default``; an explicit empty
+    list is preserved (it means "none", which callers report clearly).
+    """
+    if value is None:
+        return default
+    if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+        raise ConfigError(f"{context} must be a list of names.")
+    return tuple(item.strip() for item in value if item.strip())
 
 
 def _passthrough_options(section: dict[str, Any], reserved: set[str]) -> dict[str, Any]:
@@ -203,6 +260,35 @@ def load_config(project_root: Path | str = ".") -> AppConfig:
         options=_passthrough_options(workflow_data, {"name"}),
     )
 
+    orchestrator_data = _as_mapping(raw.get("orchestrator"), "orchestrator")
+    strategy = str(orchestrator_data.get("strategy") or "auto").strip().lower()
+    if strategy not in SUPPORTED_ORCHESTRATOR_STRATEGIES:
+        raise ConfigError(
+            f"orchestrator.strategy must be one of "
+            f"{', '.join(SUPPORTED_ORCHESTRATOR_STRATEGIES)} in {path} (got '{strategy}')."
+        )
+    planner = str(orchestrator_data.get("planner") or "rules").strip().lower()
+    if planner not in SUPPORTED_ORCHESTRATOR_PLANNERS:
+        raise ConfigError(
+            f"orchestrator.planner '{planner}' is not supported yet. "
+            f"Supported planners: {', '.join(SUPPORTED_ORCHESTRATOR_PLANNERS)} "
+            "(an LLM planner is a future extension point)."
+        )
+    orchestrator = OrchestratorSection(
+        strategy=strategy,
+        planner=planner,
+        agents=_string_list(
+            orchestrator_data.get("agents"),
+            default=DEFAULT_SPECIALIST_AGENTS,
+            context="orchestrator.agents",
+        ),
+        default_agents=_string_list(
+            orchestrator_data.get("default_agents"),
+            default=DEFAULT_ORCHESTRATOR_FALLBACK,
+            context="orchestrator.default_agents",
+        ),
+    )
+
     return AppConfig(
         agent=agent,
         model=model,
@@ -211,6 +297,7 @@ def load_config(project_root: Path | str = ".") -> AppConfig:
         workflow=workflow,
         project_root=root,
         config_path=path,
+        orchestrator=orchestrator,
     )
 
 

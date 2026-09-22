@@ -30,9 +30,21 @@ tools:
 
 skills:
   - requirement-analysis
+  - code-review
+  - unit-test-generation
 
 workflow:
   name: requirement-analysis
+
+orchestrator:
+  strategy: auto
+  planner: rules
+  agents:
+    - requirement-analysis
+    - code-review
+    - unit-test-generation
+  default_agents:
+    - requirement-analysis
 """
 
 

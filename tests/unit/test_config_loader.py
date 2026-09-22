@@ -194,3 +194,75 @@ def test_missing_model_name_mentions_the_environment_variable(
 
     with pytest.raises(ConfigError, match="AGENT_KIT_MODEL"):
         load_config(tmp_path)
+
+
+# --- orchestrator section -------------------------------------------------
+def test_orchestrator_defaults_when_the_section_is_absent(tmp_path: Path) -> None:
+    _write(tmp_path, VALID)
+
+    orchestrator = load_config(tmp_path).orchestrator
+
+    assert orchestrator.strategy == "auto"
+    assert orchestrator.planner == "rules"
+    assert orchestrator.agents == (
+        "requirement-analysis",
+        "code-review",
+        "unit-test-generation",
+    )
+    assert orchestrator.default_agents == ("requirement-analysis",)
+
+
+def test_orchestrator_section_is_parsed(tmp_path: Path) -> None:
+    _write(
+        tmp_path,
+        VALID
+        + "orchestrator:\n"
+        "  strategy: all\n"
+        "  planner: rules\n"
+        "  agents:\n"
+        "    - code-review\n"
+        "  default_agents:\n"
+        "    - code-review\n",
+    )
+
+    orchestrator = load_config(tmp_path).orchestrator
+
+    assert orchestrator.strategy == "all"
+    assert orchestrator.agents == ("code-review",)
+    assert orchestrator.default_agents == ("code-review",)
+
+
+def test_orchestrator_agents_may_be_empty(tmp_path: Path) -> None:
+    _write(tmp_path, VALID + "orchestrator:\n  agents: []\n")
+    assert load_config(tmp_path).orchestrator.agents == ()
+
+
+def test_orchestrator_rejects_an_unknown_strategy(tmp_path: Path) -> None:
+    _write(tmp_path, VALID + "orchestrator:\n  strategy: llm\n")
+    with pytest.raises(ConfigError, match=r"orchestrator.strategy must be one of"):
+        load_config(tmp_path)
+
+
+def test_orchestrator_rejects_an_unknown_planner(tmp_path: Path) -> None:
+    _write(tmp_path, VALID + "orchestrator:\n  planner: llm\n")
+    with pytest.raises(ConfigError, match="not supported yet"):
+        load_config(tmp_path)
+
+
+def test_orchestrator_agents_must_be_a_list(tmp_path: Path) -> None:
+    _write(tmp_path, VALID + "orchestrator:\n  agents: code-review\n")
+    with pytest.raises(ConfigError, match=r"orchestrator.agents must be a list"):
+        load_config(tmp_path)
+
+
+def test_to_dict_includes_the_orchestrator(tmp_path: Path) -> None:
+    _write(tmp_path, VALID)
+    data = load_config(tmp_path).to_dict()
+
+    assert data["orchestrator"]["strategy"] == "auto"
+    assert data["orchestrator"]["planner"] == "rules"
+    assert data["orchestrator"]["agents"] == [
+        "requirement-analysis",
+        "code-review",
+        "unit-test-generation",
+    ]

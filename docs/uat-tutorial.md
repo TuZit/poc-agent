@@ -297,19 +297,27 @@ agent-kit kiro status
 ```text
 Kiro integration status
 
-✓ .kiro/steering/agent-kit.md
-✓ .kiro/steering/agent-kit-requirements.md
+✓ .kiro/agents/agent-kit.json
+✓ .kiro/agents/code-review.json
+✓ .kiro/agents/unit-test.json
 ✓ .kiro/hooks/agent-kit-context.json
 ✓ .kiro/hooks/agent-kit-evaluate.json
+✓ .kiro/hooks/agent-kit-orchestrate.json
 ✓ .kiro/hooks/agent-kit-run.json
-✓ .kiro/agents/agent-kit.json
-✓ .kiro/prompts/agent-kit.run.md
+✓ .kiro/prompts/agent-kit.code-review.md
 ✓ .kiro/prompts/agent-kit.evaluate.md
+✓ .kiro/prompts/agent-kit.orchestrate.md
+✓ .kiro/prompts/agent-kit.run.md
+✓ .kiro/prompts/agent-kit.unit-test.md
 ✓ .kiro/settings/mcp.json
-✓ .kiro/specs/agent-kit-poc/requirements.md
-✓ .kiro/specs/agent-kit-poc/design.md
-✓ .kiro/specs/agent-kit-poc/tasks.md
 ✓ .kiro/specs/agent-kit-poc/.config.kiro
+✓ .kiro/specs/agent-kit-poc/design.md
+✓ .kiro/specs/agent-kit-poc/requirements.md
+✓ .kiro/specs/agent-kit-poc/tasks.md
+✓ .kiro/steering/agent-kit-code-review.md
+✓ .kiro/steering/agent-kit-requirements.md
+✓ .kiro/steering/agent-kit-unit-test.md
+✓ .kiro/steering/agent-kit.md
 
 Kiro integration is complete.
 ```
@@ -411,28 +419,47 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 
 | ID | Kịch bản | Các bước | Kết quả mong đợi | KQ |
 |---|---|---|---|---|
-| UAT-21 | Cài lớp Kiro | `agent-kit kiro install` | Sinh đủ 13 file `.kiro/*` như mục 8.1 | ☐ |
+| UAT-21 | Cài lớp Kiro | `agent-kit kiro install` | Sinh đủ 21 file `.kiro/*` như mục 8.1 | ☐ |
 | UAT-22 | Trạng thái Kiro | `agent-kit kiro status` | Tất cả ✓, dòng `Kiro integration is complete.`, thoát mã 0 | ☐ |
 | UAT-23 | *(Negative)* Trạng thái khi thiếu | Xoá `.kiro/settings/mcp.json` → `agent-kit kiro status` | Dòng `✗ .../mcp.json`, **thoát mã 1**; chạy lại `kiro install` để phục hồi | ☐ |
 | UAT-24 | Không ghi đè file đã sửa | Sửa `.kiro/steering/agent-kit.md` thành nội dung riêng → `agent-kit kiro install` | Nội dung riêng **vẫn còn** | ☐ |
 | UAT-25 | Ghi đè khi có `--force` | `agent-kit kiro install --force` | Steering trở về nội dung template | ☐ |
-| UAT-26 | Liệt kê MCP tool | `agent-kit mcp tools` | Đủ 4 tool | ☐ |
+| UAT-26 | Liệt kê MCP tool | `agent-kit mcp tools` | Đủ 6 tool (gồm `agent_kit_orchestrate`, `agent_kit_list_agents`) | ☐ |
 | UAT-27 | Gọi MCP tool | `agent-kit mcp call agent_kit_capabilities` | In cấu hình đang dùng (model, tools, skills, workflow) | ☐ |
-| UAT-28 | MCP handshake | Lệnh `printf ... \| agent-kit mcp serve` ở mục 8.3 | 2 dòng JSON hợp lệ, có `serverInfo` và 4 tool | ☐ |
-| UAT-29 | Lưu ý an toàn MCP | `cat .kiro/settings/mcp.json` | `autoApprove` **không** chứa `agent_kit_run_workflow` | ☐ |
+| UAT-28 | MCP handshake | Lệnh `printf ... \| agent-kit mcp serve` ở mục 8.3 | 2 dòng JSON hợp lệ, có `serverInfo` và 6 tool | ☐ |
+| UAT-29 | Lưu ý an toàn MCP | `cat .kiro/settings/mcp.json` | `autoApprove` **không** chứa `agent_kit_run_workflow`/`agent_kit_orchestrate` | ☐ |
 | UAT-30 | Dùng trong Kiro IDE | Mục 8.4 | Kiro thấy server `agent-kit`, tool chạy được, tạo file output | ☐ |
 
 ### 9.5 Nhóm E — An toàn & chất lượng
 
 | ID | Kịch bản | Các bước | Kết quả mong đợi | KQ |
 |---|---|---|---|---|
-| UAT-31 | Toàn bộ test suite | `cd dsh-build && uv run pytest` | `188 passed`, **không cần** `OPENAI_API_KEY`, không cần mạng | ☐ |
+| UAT-31 | Toàn bộ test suite | `cd dsh-build && uv run pytest` | `252 passed`, **không cần** `OPENAI_API_KEY`, không cần mạng | ☐ |
 | UAT-32 | Filesystem bị giới hạn | `uv run pytest tests/unit/test_tools.py -k traversal` | Test PASS: ghi ra ngoài project root bị từ chối | ☐ |
 | UAT-33 | Shell bị giới hạn | `uv run pytest tests/unit/test_tools.py -k whitelist` | Test PASS: lệnh ngoài whitelist (`bash`, `echo`...) bị từ chối | ☐ |
 | UAT-34 | Không lộ secret | `cat .agent/config.yaml` | Không có API key trong file; key chỉ nằm ở biến môi trường | ☐ |
 | UAT-35 | Chạy không cần API key | `unset OPENAI_API_KEY` → `agent-kit config set model.provider mock` → `agent-kit run` | Vẫn chạy thành công | ☐ |
 
 ---
+
+### 9.6 Nhóm F — Đa agent & orchestrator
+
+| ID | Kịch bản | Các bước | Kết quả mong đợi | KQ |
+|---|---|---|---|---|
+| UAT-36 | Danh sách agent | `agent-kit agents` | In 3 agent (`requirement-analysis`, `code-review`, `unit-test-generation`), contract từng agent, dòng `Orchestrator: workflow=orchestration ... strategy=auto` | ☐ |
+| UAT-37 | Agent code review | `agent-kit run --workflow code-review` | Tạo `output/sample-code-review.md`, có `# Code Review` + 4 section (Summary, Findings, Recommendations, Open Questions), "Validation passed" | ☐ |
+| UAT-38 | Agent unit test | `agent-kit run --workflow unit-test-generation` | Tạo `output/sample-unit-test.md`, có `# Unit Test Plan` + 5 section (Summary, Test Scope, Test Cases, Edge Cases, Open Questions) | ☐ |
+| UAT-39 | Orchestrator tự chọn agent | `agent-kit run --workflow orchestration` | In `Orchestrator selected: code-review, unit-test-generation`, tạo `output/sample-orchestration.md` có `## Request Analysis`, `## Agent: Code Review`, `## Agent: Unit Test Generation`, `## Summary` | ☐ |
+| UAT-40 | Ép agent | `agent-kit run --workflow orchestration --agents code-review` | Chỉ chạy code-review: báo cáo **không** có `## Agent: Unit Test Generation` | ☐ |
+| UAT-41 | *(Negative)* Agent sai tên | `agent-kit run --workflow orchestration --agents khong-ton-tai` | Thoát mã 1, báo `Unknown agent`, liệt kê agent hợp lệ | ☐ |
+| UAT-42 | *(Negative)* Strategy sai | `agent-kit run --workflow orchestration --strategy llm` | Thoát mã 1, báo `Unknown orchestrator strategy` | ☐ |
+| UAT-43 | Chấm điểm theo contract agent | `agent-kit evaluate output/sample-code-review.md --workflow code-review` | `Result: PASS`; nếu chạy **không** có `--workflow` → FAIL (thiếu section Objective) | ☐ |
+| UAT-44 | Slash command / custom agent trong Kiro | Trong Kiro: chạy prompt `agent-kit.code-review`; hoặc `kiro-cli --agent code-review` | Kiro gọi tool `agent_kit_run_workflow` với `workflow=code-review` và tạo báo cáo | ☐ |
+| UAT-45 | *(Negative)* Thiếu API key với agent thật | `config set model.provider openai`, unset key, `agent-kit run --workflow code-review` | Thoát mã 1, báo thiếu `OPENAI_API_KEY` (không crash) | ☐ |
+
+> Ghi chú nghiệm thu: với `model.provider: mock`, nội dung do agent sinh ra là **cố định**
+> (mock trả output theo skill) nên có thể so khớp với `samples/<agent>/expected/`.
+> Với model thật, chỉ cần đủ section + `Result: PASS` (xem mục 7).
 
 ## 10. Tiêu chí nghiệm thu
 
@@ -442,8 +469,9 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 2. `agent-kit doctor` báo `Agent environment is ready.` ở cấu hình `mock`.
 3. `agent-kit evaluate output/sample-001.md` trả `Result: PASS`.
 4. `agent-kit kiro status` trả `Kiro integration is complete.`
-5. `uv run pytest` trả `188 passed` **khi đã unset `OPENAI_API_KEY`** (chứng minh test offline).
-6. Không có lỗi crash/traceback Python nào khi chạy các kịch bản trên (ngoại trừ các negative test được mô tả là phải thoát mã 1 với thông báo thân thiện).
+5. `uv run pytest` trả `252 passed` **khi đã unset `OPENAI_API_KEY`** (chứng minh test offline).
+6. Nhóm F: orchestrator tự chọn đúng agent và báo cáo tổng hợp đủ section.
+7. Không có lỗi crash/traceback Python nào khi chạy các kịch bản trên (ngoại trừ các negative test được mô tả là phải thoát mã 1 với thông báo thân thiện).
 
 **FAIL** nếu: có traceback Python thô, CLI treo, ghi được ra ngoài project root, thực thi được lệnh ngoài whitelist, hoặc file cấu hình chứa secret.
 
@@ -523,9 +551,13 @@ agent-kit config get model.provider
 agent-kit config set model.provider mock
 
 # Chạy & đánh giá
+agent-kit agents
 agent-kit run
+agent-kit run --workflow code-review
+agent-kit run --workflow orchestration --agents code-review
 agent-kit run --input <file> --output <file>
 agent-kit evaluate output/sample-001.md
+agent-kit evaluate output/sample-code-review.md --workflow code-review
 agent-kit evaluate output/sample-001.md --require-concept "create product"
 
 # Kiro
@@ -572,6 +604,7 @@ demo-project/
 | [`../README.md`](../README.md) | Tổng quan sản phẩm, kiến trúc, hướng dẫn mở rộng |
 | [`end-user-install.md`](end-user-install.md) | Cài đặt cho người dùng không có Python (binary, 1 lệnh) |
 | [`packaging-deployment.md`](packaging-deployment.md) | Đóng gói (wheel/binary/Docker) và triển khai (CI/CD, secret, rollback) |
+| [`multi-agent.md`](multi-agent.md) | 3 specialist agent + orchestrator: routing, CLI/MCP/Kiro, cách thêm agent |
 | [`agent-integrations.md`](agent-integrations.md) | Kiến trúc tích hợp agent tool (hiện tại: Kiro) |
 | [`architecture.md`](architecture.md) | Kiến trúc phân lớp, mô hình bảo mật |
 | [`development.md`](development.md) | Hướng dẫn cho developer (setup, test, thêm model/tool/skill/workflow) |
