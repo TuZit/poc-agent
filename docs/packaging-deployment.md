@@ -1,6 +1,6 @@
 # Đóng gói (Packaging) & Triển khai (Deployment)
 
-**Sản phẩm:** Agent Kit POC (`agent-kit`) · **Phiên bản:** 0.1.0
+**Sản phẩm:** Agent Kit POC (`agent-kit`) · **Phiên bản:** 0.2.0
 **Đối tượng:** dev/DevOps phát hành và triển khai bộ kit.
 
 > Tài liệu này mô tả **cách đóng gói artifact** và **cách triển khai** POC ra môi
@@ -122,7 +122,7 @@ print("tổng file trong wheel:", len(names))
 PY
 ```
 
-Kết quả thực tế của bản 0.1.0:
+Kết quả thực tế của bản 0.2.0:
 
 ```text
 agent_kit/_bundled/skills 2 file(s)
@@ -152,7 +152,7 @@ Kiểm chứng lúc runtime rằng asset đang lấy từ bản **đã cài** (k
 Version chỉ nằm ở `src/agent_kit/__init__.py`:
 
 ```python
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 ```
 
 Hatchling đọc giá trị này (`[tool.hatch.version]`) để đặt tên artifact và metadata.
@@ -160,7 +160,7 @@ Hatchling đọc giá trị này (`[tool.hatch.version]`) để đặt tên arti
 
 ```bash
 uv run python -c "import agent_kit, importlib.metadata as m; print(agent_kit.__version__, m.version('agent-kit-poc'))"
-# 0.1.0 0.1.0   ← hai giá trị phải trùng nhau
+# 0.2.0 0.2.0   ← hai giá trị phải trùng nhau
 ```
 
 Quy ước (semver): `PATCH` sửa lỗi/nội dung skill, `MINOR` thêm tool/model/workflow,
@@ -201,7 +201,7 @@ cd dsh-build
 rm -rf dist && uv build
 
 # 1) cài từ wheel vào môi trường sạch (không dùng source)
-uv tool install dist/agent_kit_poc-0.1.0-py3-none-any.whl --force
+uv tool install dist/agent_kit_poc-0.2.0-py3-none-any.whl --force
 agent-kit --version
 
 # 2) chạy demo hoàn toàn ngoài repo, chỉ có CLI đã cài
@@ -229,7 +229,7 @@ agent-kit kiro status                               # → Kiro integration is co
 | ☐ | Cài từ wheel chạy được demo | mục 6 |
 | ☐ | Docker image build + chạy được | mục 8 |
 | ☐ | Docs cập nhật (`README`, `docs/*`, `.kiro/specs`, `specs/`) | — |
-| ☐ | Commit sạch, đã tag version | `git tag v0.1.0` |
+| ☐ | Commit sạch, đã tag version | `git tag v0.2.0` |
 
 ---
 
@@ -238,7 +238,7 @@ agent-kit kiro status                               # → Kiro integration is co
 | Cách | Lệnh | Khi nào dùng |
 |---|---|---|
 | **uv tool** (khuyến nghị) | `uv tool install '.[openai]' --force` hoặc `uv tool install dist/*.whl --force` | máy dev/tester |
-| **uv tool từ git** | `uv tool install "git+https://host/repo.git@v0.1.0"` | chưa có package index |
+| **uv tool từ git** | `uv tool install "git+https://host/repo.git@v0.2.0"` | chưa có package index |
 | **pipx** | `pipx install 'agent-kit-poc[openai]'` | đã dùng pipx cho CLI khác |
 | **pip trong venv** | `python -m venv .venv && .venv/bin/pip install 'agent-kit-poc[openai]'` | nhúng vào app Python khác |
 | **Nội bộ / air-gapped** | `pip install --no-index --find-links=/kho/wheels 'agent-kit-poc[openai]'` | máy không ra internet |
@@ -248,7 +248,7 @@ Cài không có extras (chỉ dùng `model.provider: mock`) giúp giảm depende
 không cần mạng:
 
 ```bash
-uv tool install dist/agent_kit_poc-0.1.0-py3-none-any.whl --force
+uv tool install dist/agent_kit_poc-0.2.0-py3-none-any.whl --force
 ```
 
 ---
@@ -284,8 +284,8 @@ agent-kit-windows-x86_64.exe
 Phát hành lên host, ví dụ GitHub Releases:
 
 ```bash
-gh release create v0.1.0 dist/bin/agent-kit-darwin-arm64 dist/bin/agent-kit-linux-x86_64 \
-  --title "Agent Kit POC v0.1.0"
+gh release create v0.2.0 dist/bin/agent-kit-darwin-arm64 dist/bin/agent-kit-linux-x86_64 \
+  --title "Agent Kit POC v0.2.0"
 ```
 
 Người dùng cài:
@@ -351,27 +351,27 @@ CMD ["agent-kit", "--help"]
 ### Lệnh vận hành
 
 ```bash
-docker build -t agent-kit-poc:0.1.0 .
+docker build -t agent-kit-poc:0.2.0 .
 
 # kiểm tra nhanh
-docker run --rm agent-kit-poc:0.1.0 agent-kit --version
-docker run --rm agent-kit-poc:0.1.0 agent-kit doctor          # trong /work
-docker run --rm agent-kit-poc:0.1.0 agent-kit mcp tools
+docker run --rm agent-kit-poc:0.2.0 agent-kit --version
+docker run --rm agent-kit-poc:0.2.0 agent-kit doctor          # trong /work
+docker run --rm agent-kit-poc:0.2.0 agent-kit mcp tools
 
 # chạy trên project của bạn (mount + secret qua env)
-docker run --rm -v "$PWD:/work" -e OPENAI_API_KEY agent-kit-poc:0.1.0 \
+docker run --rm -v "$PWD:/work" -e OPENAI_API_KEY agent-kit-poc:0.2.0 \
   agent-kit run --project /work
 
 # dùng file env thay vì gõ key trên command line
-docker run --rm -v "$PWD:/work" --env-file .env agent-kit-poc:0.1.0 \
+docker run --rm -v "$PWD:/work" --env-file .env agent-kit-poc:0.2.0 \
   agent-kit doctor --project /work
 
 # chế độ offline, không cần secret
-docker run --rm -v "$PWD:/work" agent-kit-poc:0.1.0 \
+docker run --rm -v "$PWD:/work" agent-kit-poc:0.2.0 \
   agent-kit run --project /work          # khi config đã đặt provider: mock
 
 # smoke test trong container (chạy init ngay trong /work)
-docker run --rm agent-kit-poc:0.1.0 sh -lc \
+docker run --rm agent-kit-poc:0.2.0 sh -lc \
   'agent-kit init demo && agent-kit config set model.provider mock --project demo \
    && agent-kit run --project demo && agent-kit evaluate demo/output/sample-001.md'
 ```
@@ -509,7 +509,7 @@ uv tool install dist/agent_kit_poc-0.2.0-py3-none-any.whl --force
 agent-kit --version
 
 # rollback: cài lại wheel cũ (giữ artifact của mọi bản phát hành!)
-uv tool install dist/agent_kit_poc-0.1.0-py3-none-any.whl --force
+uv tool install dist/agent_kit_poc-0.2.0-py3-none-any.whl --force
 
 # gỡ hoàn toàn
 uv tool uninstall agent-kit-poc
@@ -619,9 +619,9 @@ uv tool install '.[openai]' --force         # cài từ source kèm extras
 uv run python -c "import agent_kit; print(agent_kit.__version__)"
 
 # ---- Deployment ----
-docker build -t agent-kit-poc:0.1.0 .
-docker run --rm -v "$PWD:/work" --env-file .env agent-kit-poc:0.1.0 agent-kit doctor --project /work
-uv tool install dist/agent_kit_poc-0.1.0-py3-none-any.whl --force    # rollback
+docker build -t agent-kit-poc:0.2.0 .
+docker run --rm -v "$PWD:/work" --env-file .env agent-kit-poc:0.2.0 agent-kit doctor --project /work
+uv tool install dist/agent_kit_poc-0.2.0-py3-none-any.whl --force    # rollback
 uv tool uninstall agent-kit-poc
 
 # ---- Kiểm tra sau deploy ----

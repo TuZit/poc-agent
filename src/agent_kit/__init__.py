@@ -16,6 +16,6 @@ Layers (each one only depends on the layers below it):
     cli  ->  agent.runtime  ->  {model, tools, skills, workflow}  ->  evaluation
 """
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = ["__version__"]

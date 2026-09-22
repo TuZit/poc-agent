@@ -20,8 +20,12 @@ htmlcov/
 .env.local
 *.local.env
 
-# Agent Kit / Kiro generated run artifacts
+# Agent Kit / Kiro generated run artifacts.
+# The kit repository is not itself a project; these exist only for local
+# experiments (agent-kit init ., agent-kit run, agent-kit kiro install).
 output/
+.agent/
+.kiro/
 .agent/local.yaml
 .kiro/settings/local.json
 

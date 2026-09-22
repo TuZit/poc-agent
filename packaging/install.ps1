@@ -9,7 +9,7 @@
         irm https://YOUR-HOST/agent-kit/install.ps1 | iex
 
     Environment variables (or parameters):
-        AGENT_KIT_VERSION      version to install     (default: 0.1.0)
+        AGENT_KIT_VERSION      version to install     (default: 0.2.0)
         AGENT_KIT_BASE_URL     release base URL       (default: <placeholder>)
         AGENT_KIT_INSTALL_DIR  install directory      (default: $env:LOCALAPPDATA\Programs\agent-kit)
 
@@ -19,7 +19,7 @@
     running `pyinstaller packaging/agent-kit.spec` on a Windows runner.
 #>
 param(
-    [string]$Version = $(if ($env:AGENT_KIT_VERSION) { $env:AGENT_KIT_VERSION } else { "0.1.0" }),
+    [string]$Version = $(if ($env:AGENT_KIT_VERSION) { $env:AGENT_KIT_VERSION } else { "0.2.0" }),
     [string]$BaseUrl = $(if ($env:AGENT_KIT_BASE_URL) { $env:AGENT_KIT_BASE_URL } else { "https://github.com/your-org/agent-kit-poc/releases/download" }),
     [string]$InstallDir = $(if ($env:AGENT_KIT_INSTALL_DIR) { $env:AGENT_KIT_INSTALL_DIR } else { Join-Path $env:LOCALAPPDATA "Programs\agent-kit" })
 )

@@ -30,7 +30,7 @@ def test_help_lists_every_command(runner: CliRunner) -> None:
 def test_version_flag(runner: CliRunner) -> None:
     result = runner.invoke(app, ["--version"])
     assert result.exit_code == 0
-    assert "agent-kit 0.1.0" in _out(result)
+    assert "agent-kit 0.2.0" in _out(result)
 
 
 def test_no_arguments_shows_help(runner: CliRunner) -> None:
@@ -159,6 +159,8 @@ def test_doctor_passes_for_mock_project(runner: CliRunner, mock_project: Path) -
     output = _out(result)
     assert result.exit_code == 0, output
     assert "Agent Kit Doctor" in output
+    assert "Agent Kit 0.2.0" in output
+    assert "python package:" in output or "standalone binary:" in output
     assert "Python 3.11+" in output
     assert "Configuration" in output
     assert "Model configuration (mock/mock-model)" in output

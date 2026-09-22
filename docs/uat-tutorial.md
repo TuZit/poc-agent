@@ -1,7 +1,7 @@
 # Hướng dẫn cài đặt & sử dụng — Tài liệu UAT
 
 **Sản phẩm:** Agent Kit POC (`agent-kit`)
-**Phiên bản:** 0.1.0
+**Phiên bản:** 0.2.0
 **Mục đích tài liệu:** hướng dẫn người kiểm thử (UAT tester) cài đặt, chạy thử và nghiệm thu bản POC.
 **Thời lượng thực hiện dự kiến:** 30–45 phút (đã bao gồm cả phần Kiro).
 
@@ -87,7 +87,7 @@ chmod +x ~/.local/bin/agent-kit
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Kiểm tra: `agent-kit --version` → `agent-kit 0.1.0`. Toàn bộ phần còn lại của tài
+Kiểm tra: `agent-kit --version` → `agent-kit 0.2.0`. Toàn bộ phần còn lại của tài
 liệu áp dụng y hệt. Chi tiết + xử lý sự cố macOS/Windows:
 [`end-user-install.md`](end-user-install.md).
 
@@ -114,7 +114,7 @@ agent-kit --version
 **Kết quả mong đợi:**
 
 ```text
-agent-kit 0.1.0
+agent-kit 0.2.0
 ```
 
 ```bash
@@ -221,6 +221,7 @@ agent-kit evaluate output/sample-001.md
 ```text
 Agent Kit Doctor
 
+✓ Agent Kit 0.2.0 (python package: .../site-packages/agent_kit)
 ✓ Python 3.11+ (3.12.14)
 ✓ Configuration (.agent/config.yaml)
 ✓ Configuration is valid
@@ -357,7 +358,7 @@ printf '%s\n' \
   | agent-kit mcp serve
 ```
 
-**Kết quả mong đợi (2 dòng JSON):** dòng 1 có `"serverInfo":{"name":"agent-kit","version":"0.1.0"}`; dòng 2 liệt kê đủ 4 tool.
+**Kết quả mong đợi (2 dòng JSON):** dòng 1 có `"serverInfo":{"name":"agent-kit","version":"0.2.0"}`; dòng 2 liệt kê đủ 6 tool.
 
 ### 8.4 Sử dụng trong Kiro IDE
 
@@ -383,7 +384,7 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 
 | ID | Kịch bản | Các bước | Kết quả mong đợi | KQ |
 |---|---|---|---|---|
-| UAT-01 | Cài đặt CLI | `uv tool install . --force` → `agent-kit --version` | In ra `agent-kit 0.1.0` | ☐ |
+| UAT-01 | Cài đặt CLI | `uv tool install . --force` → `agent-kit --version` | In ra `agent-kit 0.2.0` | ☐ |
 | UAT-02 | Trợ giúp CLI | `agent-kit --help` | Liệt kê `init`, `doctor`, `config`, `run`, `evaluate`, `kiro`, `mcp` | ☐ |
 | UAT-03 | Khởi tạo project | `agent-kit init demo-project --ai kiro` | Tạo `.agent/config.yaml`, `README.md`, `samples/`, `.kiro/` | ☐ |
 | UAT-04 | *(Negative)* Chống ghi đè | Chạy lại `agent-kit init demo-project` | **Thoát mã 1**, báo "already exists", **không** thay đổi file nào | ☐ |
@@ -502,7 +503,7 @@ Ghi kết quả vào cột cuối: **P** = Pass, **F** = Fail, kèm ghi chú n�
 Tạo file `UAT-RESULT.md` với nội dung sau và điền khi test:
 
 ```markdown
-# Báo cáo kết quả UAT — Agent Kit POC v0.1.0
+# Báo cáo kết quả UAT — Agent Kit POC v0.2.0
 
 - Người test:
 - Ngày test:

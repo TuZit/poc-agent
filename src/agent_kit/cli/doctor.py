@@ -14,9 +14,11 @@ from pathlib import Path
 
 import typer
 
+from agent_kit import __version__
 from agent_kit.cli.common import FAIL_MARK, OK_MARK, info, relative_to
 from agent_kit.config import ConfigError, default_config_path, load_config
 from agent_kit.model import available_providers, required_env_vars
+from agent_kit.paths import runtime_origin
 from agent_kit.skills import SkillError, SkillLoader
 from agent_kit.tools import create_enabled_tools
 from agent_kit.tools.base import ToolError
@@ -72,6 +74,9 @@ def doctor_command(
 ) -> None:
     """Check that this project can run the agent."""
     report = _Report()
+
+    # 0. Which build is running (catches a stale install shadowing the source).
+    report.check(f"Agent Kit {__version__}", True, note=runtime_origin())
 
     # 1. Python version ----------------------------------------------------
     version = sys.version_info

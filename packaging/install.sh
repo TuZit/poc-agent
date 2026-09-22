@@ -6,7 +6,7 @@
 # No Python, pip or uv is required: the binary is self-contained.
 #
 # Environment variables:
-#   AGENT_KIT_VERSION      version to install        (default: 0.1.0)
+#   AGENT_KIT_VERSION      version to install        (default: 0.2.0)
 #   AGENT_KIT_BASE_URL     release base URL          (default: <placeholder>)
 #   AGENT_KIT_INSTALL_DIR  install directory         (default: ~/.local/bin)
 #   AGENT_KIT_TARGET       override platform tag     (e.g. linux-x86_64)
@@ -16,7 +16,7 @@
 #   os: darwin | linux     arch: arm64 | x86_64
 set -eu
 
-VERSION="${AGENT_KIT_VERSION:-0.1.0}"
+VERSION="${AGENT_KIT_VERSION:-0.2.0}"
 BASE_URL="${AGENT_KIT_BASE_URL:-https://github.com/your-org/agent-kit-poc/releases/download}"
 INSTALL_DIR="${AGENT_KIT_INSTALL_DIR:-$HOME/.local/bin}"
 

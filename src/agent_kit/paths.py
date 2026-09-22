@@ -40,6 +40,17 @@ def package_root() -> Path:
     return Path(__file__).resolve().parent
 
 
+def runtime_origin() -> str:
+    """Where this build runs from.
+
+    Printed by ``agent-kit doctor`` so a stale installation (an old wheel or
+    binary shadowing a newer source checkout) is visible immediately.
+    """
+    if getattr(sys, "_MEIPASS", None):
+        return f"standalone binary: {sys.executable}"
+    return f"python package: {package_root()}"
+
+
 def repo_root_candidate() -> Path:
     """Best guess for the source checkout root (``<repo>/src/agent_kit`` -> ``<repo>``)."""
     return package_root().parent.parent

@@ -34,7 +34,7 @@ Script sẽ:
 Cài phiên bản cụ thể / thư mục khác:
 
 ```bash
-AGENT_KIT_VERSION=0.1.0 AGENT_KIT_INSTALL_DIR="$HOME/bin" \
+AGENT_KIT_VERSION=0.2.0 AGENT_KIT_INSTALL_DIR="$HOME/bin" \
   curl -fsSL https://YOUR-HOST/agent-kit/install.sh | sh
 ```
 
@@ -78,7 +78,7 @@ agent-kit --version
 **Kết quả mong đợi:**
 
 ```text
-agent-kit 0.1.0
+agent-kit 0.2.0
 ```
 
 ### A.4 Cập nhật / gỡ cài
@@ -110,8 +110,8 @@ Kích thước binary ~20 MB, chạy độc lập — không cần Python, `pip`
 Nếu máy đã có Docker Desktop:
 
 ```bash
-docker run --rm -v "$PWD:/work" agent-kit-poc:0.1.0 agent-kit --help
-docker run --rm -v "$PWD:/work" -e OPENAI_API_KEY agent-kit-poc:0.1.0 \
+docker run --rm -v "$PWD:/work" agent-kit-poc:0.2.0 agent-kit --help
+docker run --rm -v "$PWD:/work" -e OPENAI_API_KEY agent-kit-poc:0.2.0 \
   agent-kit run --project /work
 ```
 
@@ -267,10 +267,10 @@ printf '%s\n' \
 Ví dụ với GitHub Releases (base URL mặc định trong `install.sh`):
 
 ```bash
-gh release create v0.1.0 \
+gh release create v0.2.0 \
   dist/bin/agent-kit-darwin-arm64 \
   dist/bin/agent-kit-linux-x86_64 \
-  --title "Agent Kit POC v0.1.0"
+  --title "Agent Kit POC v0.2.0"
 ```
 
 ### 7.4 Checklist phát hành binary
